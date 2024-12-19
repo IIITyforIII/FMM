@@ -32,7 +32,7 @@ def generate_heatmap(particle_positions, resolution):
     return heatmap
 
 
-def generate_video(filename, trajectory,  resolution, zoom=100000):
+def generate_video(filename, trajectory,  resolution, zoom_margin=0.01):
     plt.clf()
     fig, ax = plt.subplots()
     heatmap_img = ax.imshow(np.zeros((resolution, resolution)), origin="lower", cmap="inferno",
@@ -41,13 +41,29 @@ def generate_video(filename, trajectory,  resolution, zoom=100000):
     ax.set_title("Particle Heatmap Over Time")
     ax.set_xlabel("x-Position")
     ax.set_ylabel("y-Position")
+
+    ax.set_xlim(-1, 1)
+    ax.set_ylim(-1, 1)
     def update(frame):
         # 2D array containing only the positions for the current frame
         if frame >= 1:
-            particle_positions = np.asarray([*trajectory.get(frame).values()]) * zoom
+            particle_positions = np.asarray([*trajectory.get(frame).values()])
+
             heatmap = generate_heatmap(particle_positions, resolution)
             heatmap_img.set_data(heatmap.T) #transposed because imshow expects y first
-            heatmap_img.set_clim(vmin=0, vmax=np.max(heatmap))  # Adjust color normalization
+            #if frame == 1:
+            heatmap_img.set_clim(vmin=0, vmax=np.max(heatmap))  # Adjust color scale
+            heatmap_img.set_extent([-1, 1, -1, 1])
+
+
+            """"# zoom to impoertant region (smart zoom)
+            x_mean, y_mean = particle_positions[:, 0].mean(), particle_positions[:, 1].mean()
+            x_std, y_std = particle_positions[:, 0].std(), particle_positions[:, 1].std()
+            x_min, x_max = x_mean - 2 * x_std - zoom_margin, x_mean + 2 * x_std + zoom_margin
+            y_min, y_max = y_mean - 2 * y_std - zoom_margin, y_mean + 2 * y_std + zoom_margin
+            heatmap_img.set_extent([x_min, x_max, y_min, y_max])
+            ax.set_xlim(x_min, x_max)
+            ax.set_ylim(y_min, y_max)"""
         return heatmap_img
 
     ani = animation.FuncAnimation(fig, update, frames=len(trajectory), interval=100)
