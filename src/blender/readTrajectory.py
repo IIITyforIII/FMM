@@ -1,6 +1,7 @@
 import bpy
 import numpy as np
 import csv
+import os
 
 # Lösche alle Objekte in der Szene
 bpy.ops.object.select_all(action='SELECT')
@@ -9,7 +10,8 @@ bpy.ops.object.delete()
 # Trajektorie-Daten aus CSV laden
 trajectory_data = {}  # {frame: {vertex_id: (x, y, z)}}
 
-file_path = "C:\\Users\\Luca_Dziarski\\Documents\\uni\\FMM\\src\\blender\\trajectory.csv"
+path = os.getcwd()
+file_path = path + "\\" + "trajectory.csv"
 
 with open(file_path, 'r') as file:
     reader = csv.DictReader(file, delimiter=' ')
