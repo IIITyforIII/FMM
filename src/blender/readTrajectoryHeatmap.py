@@ -4,6 +4,8 @@ import matplotlib.animation as animation
 import os
 import csv
 import cv2
+from tqdm import tqdm
+from functools import partial
 
 def readTrajectory(filename):
     path = os.getcwd()
@@ -54,7 +56,7 @@ def generate_video(filename, trajectory,  resolution, zoom_margin=0.01):
 
     ax.set_xlim(x_min, x_max)
     ax.set_ylim(y_min, y_max)
-    def update(frame):
+    def update(frame, progressbar):
         # 2D array containing only the positions for the current frame
         if frame >= 1:
             particle_positions = np.asarray([*trajectory.get(frame).values()])
@@ -74,9 +76,12 @@ def generate_video(filename, trajectory,  resolution, zoom_margin=0.01):
             #if frame == 1:
             #heatmap_img.set_clim(vmin=0, vmax=np.max(heatmap))  # Adjust color scale
 
+        progressbar.update()
         return heatmap_img
 
-    ani = animation.FuncAnimation(fig, update, frames=len(trajectory), interval=100)
+    progressbar = tqdm(total=len(trajectory), desc="Creating video: ")
+    update_with_bar = partial(update, progressbar = progressbar)
+    ani = animation.FuncAnimation(fig, update_with_bar, frames=len(trajectory), interval=100)
     #writervideo = animation.FFMpegWriter(fps=60)
     #ani.save(filename, writer=writervideo)
     ani.save(filename, fps=10)
