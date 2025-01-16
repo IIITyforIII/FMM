@@ -14,8 +14,17 @@ class SphericalCoordinate:
     theta: float
     phi: float
 
+    def __add__(self: Self, other: Self) -> Self:
+        return (self.as_cartesian_coordinates() + other.as_cartesian_coordinates()).as_spherical_coordinates()
+
     def __sub__(self: Self, other: Self) -> Self:
-        return self.r - other.r, self.theta - other.theta, self.phi - other.phi
+        return (self.as_cartesian_coordinates() - other.as_cartesian_coordinates()).as_spherical_coordinates()
+
+    def as_cartesian_coordinates(self):
+        x = self.r * math.sin(self.phi) * math.cos(self.theta)
+        y = self.r * math.sin(self.phi) * math.sin(self.theta)
+        z = self.r * math.cos(self.theta)
+        return CartesianCoordinate(x, y, z)
 
 
 @dataclass
@@ -24,12 +33,28 @@ class CartesianCoordinate:
     y: float
     z: float
 
+    def __add__(self: Self, other: Self) -> Self:
+        return CartesianCoordinate(self.x + other.x, self.y + other.y, self.z + other.z)
 
-@dataclass
+    def __sub__(self: Self, other: Self) -> Self:
+        return CartesianCoordinate(self.x - other.x, self.y - other.y, self.z - other.z)
+
+    def as_spherical_coordinates(self) -> SphericalCoordinate:
+        r = math.sqrt(self.x**2 + self.y**2 + self.z**2)
+        theta = math.atan(self.y / self.x)
+        phi = math.acos(self.z / r)
+        return SphericalCoordinate(r, theta, phi)
+
+
 class Particle:
     position: SphericalCoordinate
     mass: float
     psi: complex
+
+    def __init__(self, position: CartesianCoordinate, mass: float):
+        self.position: position.as_spherical_coordinates()
+        self.mass = mass
+        self.psi = 0
 
 
 class Cell:
@@ -41,37 +66,6 @@ class Cell:
 
     def apply_multipoles(self, cells: list[Self], p: int, m: int, n: int) -> None:
         pass
-
-
-class TreeCell(Cell):
-    def __init__(self):
-        self.sub_cells: list[Cell] = []
-
-    def compute_multipoles(self, m: int, n: int) -> complex:
-        self.multipole = np.sum([m2m_kernel(cell, self, m, n) for cell in self.sub_cells]).item()
-        return self.multipole
-
-    def apply_multipoles(self, cells: list[Cell], p: int, m: int, n: int) -> None:
-        for cell in self.sub_cells:
-            cell.apply_multipoles(cells + [c for c in self.sub_cells if c != cell], p, m, n)
-
-
-class LeafCell(Cell):
-
-    def __init__(self):
-        self.particles: list[Particle] = []
-
-    def compute_multipoles(self, m: int, n: int) -> complex:
-        self.multipole = np.sum([p2m_kernel(particle, self, m, n) for particle in self.particles]).item()
-        return self.multipole
-
-    def apply_multipoles(self, cells: list[Cell], p: int, m: int, n: int) -> None:
-        for particle in self.particles:
-            particle.psi = 0
-            for cell in cells:
-                particle.psi += m2p_kernel(cell, particle, p, m, n)
-            for particle_prime in [p for p in self.particles if p != particle]:
-                particle.psi += p2p_kernel(particle, particle_prime)
 
 
 def theta(r: SphericalCoordinate, m: int, n: int) -> complex:
