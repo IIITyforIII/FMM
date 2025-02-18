@@ -1,6 +1,6 @@
 from coordinates import SphericalCoordinate
 from particle import Particle
-from cell import Cell
+
 
 import numpy as np
 import math
