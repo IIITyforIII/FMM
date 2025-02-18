@@ -2,8 +2,7 @@
 Module contains dataclasses to store coordiantes
 """
 from __future__ import annotations
-from typing import Optional, Union, List
-from typing_extensions import Self
+from typing import Optional, Union, List, Self
 from dataclasses import dataclass, astuple
 import numpy as np
 
