@@ -24,9 +24,9 @@ class uniformBox():
         self.__ubound = np.array([x_length/2, y_length/2, z_length/2])
         self.__lbound = -1 * self.__ubound
 
-    def samplePoint3D(self, n: int = 1) -> List[Point3D]:
+    def samplePoint3D(self, n: int = 1) -> np.ndarray:
         samples = self.__rng.uniform(self.__lbound, self.__ubound, (n,3))
-        return [Point3D(p.tolist()) for p in samples]
+        return np.array([Point3D(p.tolist()) for p in samples])
 
     def samplePolar3D(self, n: int = 1) -> list[Polar3D]:
         return [Polar3D(x) for x in self.samplePoint3D(n)]
