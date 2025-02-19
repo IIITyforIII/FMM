@@ -3,14 +3,15 @@
 # from sim.particle import Particle
 # from sim.utils import random_pos_in_box
 from geolib.coordinates import Point3D, Polar3D
-from physlib.densityModels import uniformBox, uniformSphere
+from physlib.densityModels import UniformBox, UniformSphere, PlummerSphere
 import matplotlib.pyplot as plt
 
 import numpy as np
-t = uniformSphere(radius=10)
-samples = t.samplePolar3D(500)
-samples = [Point3D(p) for p in samples]
-samples = np.array([x.to_list() for x in samples]).transpose()
+t = PlummerSphere()
+
+samples = t.sample(1000).transpose()
+# samples = [Point3D(p) for p in samples]
+# samples = np.array([x.to_list() for x in samples]).transpose()
 
 fig = plt.figure()
 ax = fig.add_subplot(projection='3d')
