@@ -6,7 +6,6 @@ TODO: Right now only assuming particles of equal mass. (numerical and implementa
 """
 from typing import Union, List
 
-from numpy.random import sample
 from geolib.coordinates import Point3D, Polar3D
 import numpy as np
 
@@ -68,7 +67,7 @@ class uniformSphere():
         ubound = [1, 2*np.pi]
         samples = self.__rng.uniform(lbound, ubound, (n,2)).transpose()
 
-        samples = np.array([np.ones(n), np.arccos(samples[0]), samples[1]]).transpose()
+        samples = np.array([self.__sample_r(n), np.arccos(samples[0]), samples[1]]).transpose()
         return np.array([Polar3D(x) + self.center for x in samples])
 
     def sample(self, n: int = 1) -> np.ndarray:

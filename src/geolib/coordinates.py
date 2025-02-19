@@ -2,7 +2,6 @@
 Module contains dataclasses to store coordiantes
 """
 from __future__ import annotations
-from enum import unique
 from typing import Optional, Union, List, Self
 from dataclasses import dataclass, astuple
 import numpy as np
@@ -92,8 +91,8 @@ class Point3D:
         Convert point to polar coordinates.
         """
         r = np.sqrt(self.x**2 + self.y**2 + self.z**2)
-        theta = np.arctan(self.y / self.x) if r != 0 else 0
-        phi = np.arccos(self.z / r) if r != 0 else 0
+        theta = np.arccos(self.z/ r) if r != 0 else 0
+        phi = np.arctan2(self.y , self.x) 
         return Polar3D(r, theta, phi)
     
     def to_list(self):

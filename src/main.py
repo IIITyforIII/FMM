@@ -2,8 +2,7 @@
 # from sim.coordinates import CartesianCoordinate
 # from sim.particle import Particle
 # from sim.utils import random_pos_in_box
-from numpy._core.defchararray import center
-from geolib.coordinates import Point3D
+from geolib.coordinates import Point3D, Polar3D
 from physlib.densityModels import uniformBox, uniformSphere
 import matplotlib.pyplot as plt
 
