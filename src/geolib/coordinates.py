@@ -2,6 +2,7 @@
 Module contains dataclasses to store coordiantes
 """
 from __future__ import annotations
+from enum import unique
 from typing import Optional, Union, List, Self
 from dataclasses import dataclass, astuple
 import numpy as np
@@ -18,7 +19,7 @@ class Polar3D:
 
     def __init__(self: Self, point_or_r: Union[float, Point3D, List[Union[float,int]], np.ndarray], theta:Optional[float] = None, phi:Optional[float] = None) -> None:
         if isinstance(point_or_r, Point3D):
-           self.r, self.theta, self.phi = astuple(point_or_r.toPolar3D()) 
+           self.r, self.theta, self.phi = astuple(point_or_r.to_Polar3D()) 
         elif isinstance(point_or_r, (float, int)) and isinstance(theta, (float, int)) and isinstance(phi, (float, int)):
             self.r = point_or_r 
             self.theta = theta if theta != None else 0.
@@ -30,11 +31,11 @@ class Polar3D:
         else:
             raise TypeError('Invalid arguments: (float, float, float), (list[float|int]) of size 3 or (Point3D) expected.')
 
-    def __add__(self: Self, other: Polar3D) -> Polar3D:
-        return (self.to_Point3D() + other.to_Point3D()).to_Polar3D()
+    def __add__(self: Self, other: Union[Polar3D,Point3D]) -> Polar3D:
+        return (self.to_Point3D() + other.to_Point3D()).to_Polar3D() if isinstance(other,Polar3D) else (self.to_Point3D()+other).to_Polar3D()
 
-    def __sub__(self: Self, other: Polar3D) -> Polar3D:
-        return (self.to_Point3D() - other.to_Point3D()).to_Polar3D()
+    def __sub__(self: Self, other: Union[Polar3D,Point3D]) -> Polar3D:
+        return (self.to_Point3D() - other.to_Point3D()).to_Polar3D() if isinstance(other,Polar3D) else (self.to_Point3D()+other).to_Polar3D()
 
     def to_Point3D(self: Self) -> Point3D:
         """
@@ -80,11 +81,11 @@ class Point3D:
         else:
             raise TypeError('Invalid arguments: (float, float, float), (list[float|int]) of size 3 or (Polar3D) expected.')
 
-    def __add__(self: Self, other: Point3D) -> Point3D:
-        return Point3D(self.x + other.x, self.y + other.y, self.z + other.z)
+    def __add__(self: Self, other: Union[Point3D,Polar3D]) -> Point3D:
+        return Point3D(self.x + other.x, self.y + other.y, self.z + other.z) if isinstance(other,Point3D) else self.__add__(other.to_Point3D())
 
-    def __sub__(self: Self, other: Point3D) -> Point3D:
-        return Point3D(self.x - other.x, self.y - other.y, self.z - other.z)
+    def __sub__(self: Self, other: Union[Point3D,Polar3D]) -> Point3D:
+        return Point3D(self.x - other.x, self.y - other.y, self.z - other.z) if isinstance(other,Point3D) else self.__add__(other.to_Point3D())
 
     def to_Polar3D(self) -> Polar3D:
         """
