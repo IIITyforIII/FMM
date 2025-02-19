@@ -76,7 +76,7 @@ class uniformSphere():
 
     def __sample_r(self, n: int = 1) -> np.ndarray:
         """Sample radii according to density model"""
-        samples = self.__rng.uniform(0, self.radius, n)
+        samples = self.__rng.uniform(0, 1, n)
         fr = lambda u: self.radius * np.cbrt(u)
         return fr(samples)
         

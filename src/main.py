@@ -7,14 +7,15 @@ from physlib.densityModels import uniformBox, uniformSphere
 import matplotlib.pyplot as plt
 
 import numpy as np
-t = uniformSphere()
-samples = t.samplePolar3D(1000)
+t = uniformSphere(radius=10)
+samples = t.samplePolar3D(500)
 samples = [Point3D(p) for p in samples]
 samples = np.array([x.to_list() for x in samples]).transpose()
 
 fig = plt.figure()
 ax = fig.add_subplot(projection='3d')
 ax.scatter(samples[0], samples[1], samples[2])
+ax.set_box_aspect((1,1,1))  # pyright: ignore
 plt.show()
 
 
