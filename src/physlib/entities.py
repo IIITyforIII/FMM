@@ -17,9 +17,6 @@ class Star(Particle):
     """
     TODO: Maybe go to collision handling, using particles with spatial extension
     """
-    def __init__(self, position: Point3D, velocity:Polar3D = Polar3D(0.,0.,0.), mass: float = 1, radius: float = 0.5) -> None:
+    def __init__(self, position: Point3D, velocity:Polar3D = Polar3D(0.,0.,0.), mass: float = 1, radius: float = 1) -> None:
         super().__init__(position, velocity, mass)
         self.radius = radius
-
-if __name__ == '__main__':
-    print('test')
