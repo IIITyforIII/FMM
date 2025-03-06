@@ -5,7 +5,8 @@ Convert to required units if needed.
 
 TODO: Right now only assuming particles of equal mass. (numerical and implementation simplicisity)
 """
-from typing import Union, List, override
+from typing import Union, List
+from typing_extensions import override
 
 from geolib.coordinates import Point3D, Polar3D
 import numpy as np
