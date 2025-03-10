@@ -122,10 +122,3 @@ def writeToCsv(data: Union[vtkPolyData, ndarray], filename: str) -> None:
         data = vtk_to_numpy(data.GetPoints().GetData())
     df = DataFrame(data=data, columns=cols)# pyright: ignore
     df.to_csv(filename, index=False)
-
-
-
-
-if __name__ == '__main__':
-    t = array([[1,2,3],[4,5,6]])
-    writeToVtp(t, 'testseet.csv')
