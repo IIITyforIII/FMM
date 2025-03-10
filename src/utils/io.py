@@ -6,7 +6,7 @@ currentlty supported:
 '''
 from typing import Union
 from pandas import read_csv, DataFrame
-from numpy import ndarray, array
+from numpy import ndarray
 from vtkmodules.vtkIOXML import vtkXMLPolyDataReader, vtkXMLPolyDataWriter
 from vtkmodules.vtkCommonDataModel import vtkPolyData 
 from vtkmodules.vtkCommonCore import vtkPoints
