@@ -1,23 +1,47 @@
-import pyvista as pv
-import numpy as np 
-import os 
-path = os.path.dirname(os.path.realpath(__file__))
+import vtkmodules.vtkInteractionStyle
+import vtkmodules.vtkRenderingOpenGL2
+from vtkmodules.vtkCommonColor import vtkNamedColors
+from vtkmodules.vtkFiltersSources import vtkConeSource
+from vtkmodules.vtkRenderingCore import vtkActor, vtkDataSetMapper, vtkPolyDataMapper, vtkRenderWindow, vtkRenderer
 
-data = np.genfromtxt(path + '/../../data/spiral_galaxy.csv', delimiter=',')
-data = np.delete(data, 0,0)
-data = np.delete(data, 3,1)
+colors = vtkNamedColors()
+
+cone = vtkConeSource()
+cone.SetHeight(3.0)
+cone.SetRadius(1.0)
+cone.SetResolution(10)
+
+coneMapper = vtkPolyDataMapper()
+coneMapper.SetInputConnection(cone.GetOutputPort())
+
+coneActor = vtkActor()
+coneActor.SetMapper(coneMapper)
+coneActor.GetProperty().SetColor(colors.GetColor3d('MistyRose'))
+
+ren1 = vtkRenderer()
+ren1.AddActor(coneActor)
+ren1.SetBackground(colors.GetColor3d('MidnightBlue'))
+
+renWin = vtkRenderWindow()
+renWin.AddRenderer(ren1)
+renWin.SetSize(300,300)
+renWin.SetWindowName('Test')
+
+#observer
+class callback():
+    def __init__(self, renderer):
+        self.ren = renderer
+
+    def __call__(self, caller, ev):
+        pos = self.ren.GetActiveCamera().GetPosition()
+        print('{},{},{}'.format(*pos))
+obs = callback(ren1)
+ren1.AddObserver('StartEvent', obs)
 
 
-pl = pv.Plotter()
-pl.background_color = 'black'
-
-pdata = pv.PointSet(data)
-
-pl.add_mesh(pdata, point_size=0.2, style='points_gaussian', render_points_as_spheres=False, emissive=False, opacity=0.2, color='white')
-
-pl.show()
 
 
 
-
-
+for i in range(360):
+    renWin.Render()
+    ren1.GetActiveCamera().Azimuth(1)
