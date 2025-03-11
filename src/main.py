@@ -2,31 +2,26 @@
 # from sim.coordinates import CartesianCoordinate
 # from sim.particle import Particle
 # from sim.utils import random_pos_in_box
+from os import write
 from geolib.coordinates import Point3D, Polar3D
 from physlib.densityModels import UniformBox, UniformSphere, PlummerSphere
 import matplotlib.pyplot as plt
-
 import numpy as np
 t = PlummerSphere()
 
-samples = t.sample(1000).transpose()
+samples = t.sample(int(10e6))
 # samples = [Point3D(p) for p in samples]
 # samples = np.array([x.to_list() for x in samples]).transpose()
+from utils.visualization import renderPointCloudInteractive
+renderPointCloudInteractive(samples, 0.01, 1.0, zoom=40)
 
-fig = plt.figure()
-ax = fig.add_subplot(projection='3d')
-ax.scatter(samples[0], samples[1], samples[2])
-ax.set_box_aspect((1,1,1))  # pyright: ignore
-plt.show()
-
-
-# # sim settings
+# # sim settins
 # num_particles = 1500
 # domain_width = 1024
 # domain_center = CartesianCoordinate(0, 0, 0)
 #
 #
-# # harmonic values (?)
+# # harmonic values (?)0
 # p = 4
 # m = 3
 # n = 3

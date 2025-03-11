@@ -1,47 +1,61 @@
+from typing import Union
+from numpy import ndarray
+
+from vtkmodules.vtkCommonDataModel import vtkPolyData
 import vtkmodules.vtkInteractionStyle
 import vtkmodules.vtkRenderingOpenGL2
 from vtkmodules.vtkCommonColor import vtkNamedColors
-from vtkmodules.vtkFiltersSources import vtkConeSource
-from vtkmodules.vtkRenderingCore import vtkActor, vtkDataSetMapper, vtkPolyDataMapper, vtkRenderWindow, vtkRenderer
+from vtkmodules.vtkRenderingCore import vtkActor, vtkPointGaussianMapper, vtkRenderWindow, vtkRenderWindowInteractor, vtkRenderer
+from vtkmodules.vtkCommonCore import vtkPoints
+from vtkmodules.util.numpy_support import numpy_to_vtk
 
-colors = vtkNamedColors()
+def renderPointCloudInteractive(data: Union[ndarray, vtkPolyData], scaleFactor: float = 0.2, opacity: float = 0.2, focalPoint: tuple = (0,0,0), zoom: float = 0) -> None:
+    '''
+    Visualize a point cloud in an interactive Window.
 
-cone = vtkConeSource()
-cone.SetHeight(3.0)
-cone.SetRadius(1.0)
-cone.SetResolution(10)
+    Parameters
+    ----------
+    data: [ndarray, vtkPolyData]
+        Point Cloud to visualize.
+    ''' 
+    
+    # convert numpy array to vtk data format
+    if isinstance(data, ndarray): 
+        points = vtkPoints()
+        points.SetData(numpy_to_vtk(data))
 
-coneMapper = vtkPolyDataMapper()
-coneMapper.SetInputConnection(cone.GetOutputPort())
+        data = vtkPolyData()
+        data.SetPoints(points)
 
-coneActor = vtkActor()
-coneActor.SetMapper(coneMapper)
-coneActor.GetProperty().SetColor(colors.GetColor3d('MistyRose'))
+    # map to render primitives
+    mapper = vtkPointGaussianMapper()
+    mapper.SetInputData(data)
+    mapper.SetScaleFactor(scaleFactor)
 
-ren1 = vtkRenderer()
-ren1.AddActor(coneActor)
-ren1.SetBackground(colors.GetColor3d('MidnightBlue'))
+    # create actor
+    actor = vtkActor()
+    actor.SetMapper(mapper)
+    actor.GetProperty().SetColor(vtkNamedColors().GetColor3d('White'))
+    actor.GetProperty().SetOpacity(opacity)
 
-renWin = vtkRenderWindow()
-renWin.AddRenderer(ren1)
-renWin.SetSize(300,300)
-renWin.SetWindowName('Test')
+    # renderer and window
+    ren = vtkRenderer()
+    ren.AddActor(actor)
+    ren.SetBackground(0,0,0)
 
-#observer
-class callback():
-    def __init__(self, renderer):
-        self.ren = renderer
+    renWin = vtkRenderWindow()
+    renWin.AddRenderer(ren)
+    renWin.SetSize(800,800)
+    renWin.SetWindowName('Data')
 
-    def __call__(self, caller, ev):
-        pos = self.ren.GetActiveCamera().GetPosition()
-        print('{},{},{}'.format(*pos))
-obs = callback(ren1)
-ren1.AddObserver('StartEvent', obs)
+    # make it interactive
+    iren = vtkRenderWindowInteractor()
+    iren.SetRenderWindow(renWin)
+    iren.SetInteractorStyle(vtkmodules.vtkInteractionStyle.vtkInteractorStyleTrackballCamera())
 
-
-
-
-
-for i in range(360):
-    renWin.Render()
-    ren1.GetActiveCamera().Azimuth(1)
+    # render! 
+    ren.ResetCamera()
+    ren.GetActiveCamera().SetFocalPoint(*focalPoint)
+    ren.GetActiveCamera().Zoom(zoom)
+    iren.Initialize()
+    iren.Start()
