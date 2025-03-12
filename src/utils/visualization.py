@@ -5,7 +5,7 @@ from vtkmodules.vtkCommonDataModel import vtkPolyData
 import vtkmodules.vtkInteractionStyle
 import vtkmodules.vtkRenderingOpenGL2
 from vtkmodules.vtkCommonColor import vtkNamedColors
-from vtkmodules.vtkRenderingCore import vtkActor, vtkPointGaussianMapper, vtkRenderWindow, vtkRenderWindowInteractor, vtkRenderer, vtkVolume, vtkColorTransferFunction
+from vtkmodules.vtkRenderingCore import vtkActor, vtkPointGaussianMapper, vtkPolyDataMapper, vtkRenderWindow, vtkRenderWindowInteractor, vtkRenderer, vtkVolume, vtkColorTransferFunction
 from vtkmodules.vtkCommonDataModel import vtkPiecewiseFunction
 from vtkmodules.vtkCommonCore import vtkPoints
 from vtkmodules.util.numpy_support import numpy_to_vtk
@@ -36,31 +36,45 @@ def renderPointCloudDensityMap(data: Union[ndarray, vtkPolyData], radius: float 
     splatter.SetInputData(data)
     splatter.SetSampleDimensions(*dimensions)
     splatter.SetRadius(radius)
+    splatter.SetScalarWarping(False)
+
+    #surface
+    from vtkmodules.vtkFiltersCore import vtkContourFilter
+    surface = vtkContourFilter()
+    surface.SetInputConnection(splatter.GetOutputPort())
+    surface.SetValue(0, 0.08)
+
+    mapper = vtkPolyDataMapper()
+    mapper.SetInputConnection(surface.GetOutputPort())
+    actor = vtkActor()
+    actor.SetMapper(mapper)
 
     # mapper
-    mapper = vtkFixedPointVolumeRayCastMapper()
-    mapper.SetInputConnection(splatter.GetOutputPort())
-
-    colorTransferFunction = vtkColorTransferFunction()
-    colorTransferFunction.AddRGBPoint(0.0, 0.0, 0.0, 0.0)
-    colorTransferFunction.AddRGBPoint(64.0, 1.0, 0.0, 0.0)
-    colorTransferFunction.AddRGBPoint(128.0, 0.0, 0.0, 1.0)
-    colorTransferFunction.AddRGBPoint(192.0, 0.0, 1.0, 0.0)
-    colorTransferFunction.AddRGBPoint(255.0, 0.0, 0.2, 0.0)
-
-    opacityTransferFunction = vtkPiecewiseFunction()
-    opacityTransferFunction.AddPoint(20, 0.0)
-    opacityTransferFunction.AddPoint(255, 0.2)
-
-    # create volume
-    volume = vtkVolume()
-    volume.SetMapper(mapper)
-    volume.GetProperty().SetColor(colorTransferFunction)
-    volume.GetProperty().SetScalarOpacity(opacityTransferFunction)
+    # mapper = vtkFixedPointVolumeRayCastMapper()
+    # mapper.SetInputConnection(splatter.GetOutputPort())
+    #
+    #
+    # colorTransferFunction = vtkColorTransferFunction()
+    # colorTransferFunction.AddRGBPoint(0.0, 0.0, 0.0, 0.0)
+    # colorTransferFunction.AddRGBPoint(64.0, 1.0, 0.0, 0.0)
+    # colorTransferFunction.AddRGBPoint(128.0, 0.0, 0.0, 1.0)
+    # colorTransferFunction.AddRGBPoint(192.0, 0.0, 1.0, 0.0)
+    # colorTransferFunction.AddRGBPoint(255.0, 0.0, 0.2, 0.0)
+    #
+    # opacityTransferFunction = vtkPiecewiseFunction()
+    # opacityTransferFunction.AddPoint(20, 0.0)
+    # opacityTransferFunction.AddPoint(255, 0.2)
+    #
+    # # create volume
+    # volume = vtkVolume()
+    # volume.SetMapper(mapper)
+    # volume.GetProperty().SetColor(colorTransferFunction)
+    # volume.GetProperty().SetScalarOpacity(opacityTransferFunction)
 
     # renderer and window
     ren = vtkRenderer()
-    ren.AddVolume(volume)
+    # ren.AddVolume(volume)
+    ren.AddActor(actor)
     # ren.SetBackground(0,0,0)
     ren.SetBackground(vtkNamedColors().GetColor3d('Wheat'))
 
@@ -77,8 +91,8 @@ def renderPointCloudDensityMap(data: Union[ndarray, vtkPolyData], radius: float 
     # render! 
     ren.ResetCamera()
     ren.ResetCameraClippingRange()
-    # ren.GetActiveCamera().SetFocalPoint(*focalPoint)
-    # ren.GetActiveCamera().Zoom(zoom)
+    ren.GetActiveCamera().SetFocalPoint(*focalPoint)
+    ren.GetActiveCamera().Zoom(zoom)
     iren.Initialize()
     iren.Start()
 

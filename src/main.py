@@ -14,7 +14,7 @@ samples = t.sample(int(2000))
 # samples = np.array([x.to_list() for x in samples]).transpose()
 from utils.visualization import renderPointCloudInteractive, renderPointCloudDensityMap
 # renderPointCloudInteractive(samples, 0.01, 1.0, zoom=40)
-renderPointCloudDensityMap(samples)
+renderPointCloudDensityMap(samples, radius=1, dimensions=(100,100,100), focalPoint=(0,0,0))
 
 
 # # sim settins
