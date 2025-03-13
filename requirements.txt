@@ -6,7 +6,7 @@ typing~=3.7.4.3
 pandas~=2.2.3
 opencv-python~=4.11.0.86
 
-typing_extensions
+typing_extensions~=4.4.0
 jax
 vtk
 
