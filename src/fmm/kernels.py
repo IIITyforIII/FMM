@@ -2,7 +2,7 @@ from geolib.coordinates import Polar3D
 from geolib.cell import Cell
 from physlib.entities import Particle
 
-
+from scipy.special import assoc_legendre_p
 import numpy as np
 import math
 import cmath
@@ -10,17 +10,17 @@ import cmath
 
 def theta(r: Polar3D, m: int, n: int) -> complex:
     # TODO Is P actually the number of permutations or something else
-    return (-1)**m * (math.factorial(n - m) / r.r**(n + 1)) * math.perm(n, m) * math.cos(r.theta) * cmath.exp(1j * m * r.phi)
+    return (-1)**m * (math.factorial(n - m) / r.r**(n + 1)) * assoc_legendre_p(n, m, math.cos(r.theta)) * cmath.exp(1j * m * r.phi)
 
 
 def gamma(r: Polar3D, m: int, n: int) -> complex:
     # TODO Is P actually the number of permutations or something else
-    return (-1)**m * (r.r**n / (math.factorial(n + m))) * math.perm(n, m) * math.cos(r.theta) * cmath.exp(1j * m * r.phi)
+    return (-1)**m * (r.r**n / (math.factorial(n + m))) * assoc_legendre_p(n, m, math.cos(r.theta)) * cmath.exp(1j * m * r.phi)
 
 
 def p2p_kernel(particle: Particle, particle_prime: Particle) -> float:
     g = 6.67430e-11
-    return (g * particle_prime.mass * particle.mass) / np.linalg.norm(particle_prime.position - particle.position)
+    return (g * particle_prime.mass * particle.mass) / np.linalg.norm((particle_prime.position - particle.position).to_Point3D().to_ndarray())
 
 
 def p2m_kernel(particle: Particle, cell: Cell, m: int, n: int) -> complex:

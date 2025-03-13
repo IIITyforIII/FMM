@@ -5,7 +5,7 @@ Convert to required units if needed.
 
 TODO: Right now only assuming particles of equal mass. (numerical and implementation simplicisity)
 """
-from typing import Union, List, override
+from typing import Union, List#, override
 
 from geolib.coordinates import Point3D, Polar3D
 import numpy as np
@@ -88,7 +88,7 @@ class PlummerSphere(UniformSphere):
     def __init__(self, center: Union[Point3D, Polar3D, List[float]] = Point3D(0, 0, 0)) -> None:
         super().__init__(center, 1)
 
-    @override
+    #@override
     def _sample_r(self, n: int = 1) -> np.ndarray:
         samples = self._rng.uniform(0,1,n)
         return  np.pow(np.pow(samples, -2/3) - 1, -1/2)
