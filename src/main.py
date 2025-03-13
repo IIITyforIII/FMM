@@ -9,12 +9,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 t = PlummerSphere()
 
-samples = t.sample(int(2000))
+samples = t.sample(int(10000))
 # samples = [Point3D(p) for p in samples]
 # samples = np.array([x.to_list() for x in samples]).transpose()
 from utils.visualization import renderPointCloudInteractive, renderPointCloudDensityMap
 # renderPointCloudInteractive(samples, 0.01, 1.0, zoom=40)
-renderPointCloudDensityMap(samples, radius=1, dimensions=(100,100,100), focalPoint=(0,0,0))
+renderPointCloudDensityMap(samples, radius=0.5, dimensions=(60,60,60), focalPoint=(0,0,0))
 
 
 # # sim settins
