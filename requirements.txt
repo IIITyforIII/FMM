@@ -1,6 +1,9 @@
-numpy~=2.0.2
-matplotlib~=3.9.4
-tqdm~=4.67.1
+numpy>=2.0.2
+matplotlib>=3.9.4
+tqdm>=4.67.1
 
+typing
+typing_extensions
+opencv-python
 jax
 vtk
