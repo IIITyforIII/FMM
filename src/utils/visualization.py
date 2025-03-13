@@ -56,13 +56,18 @@ def renderPointCloudDensityMap(data: Union[ndarray, vtkPolyData], radius: float 
     if fixedWindow is not None:
         splatter.SetModelBounds(*fixedWindow)
 
-    splatter.Update()
-    scalarRange = splatter.GetOutput().GetScalarRange()
+    # smooth
+    from vtkmodules.vtkImagingGeneral import vtkImageGaussianSmooth
+    smoother = vtkImageGaussianSmooth()
+    smoother.SetInputConnection(splatter.GetOutputPort())
+
+    smoother.Update()
+    scalarRange = smoother.GetOutput().GetScalarRange()
 
     # mapper
     mapper = vtkSmartVolumeMapper() 
     # mapper.SetSampleDistance(0.05)
-    mapper.SetInputConnection(splatter.GetOutputPort())
+    mapper.SetInputConnection(smoother.GetOutputPort())
     mapper.SetBlendModeToComposite()
 
     colorTransferFunction = vtkColorTransferFunction()
