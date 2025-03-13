@@ -4,6 +4,7 @@ tqdm>=4.67.1
 
 typing
 typing_extensions
+pandas
 opencv-python
 jax
 vtk

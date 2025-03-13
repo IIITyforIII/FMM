@@ -1,14 +1,14 @@
-from kernels import p2p_kernel, p2m_kernel, m2m_kernel, m2p_kernel
+from fmm.kernels import p2p_kernel, p2m_kernel, m2m_kernel, m2p_kernel
 from cell import Cell
-from particle import Particle
-from coordinates import CartesianCoordinate
+from physlib.entities import Particle
+from geolib.coordinates import Point3D
 
 import numpy as np
 
 
 class OctCell(Cell):
 
-    def __init__(self, center: CartesianCoordinate, width: float):
+    def __init__(self, center: Point3D, width: float):
         super().__init__(center)
         self.width = width
 
@@ -19,8 +19,8 @@ class OctCell(Cell):
         pass
 
     def contains_particle(self, particle: Particle) -> bool:
-        p = particle.position.as_cartesian_coordinates()
-        c = self.center.as_cartesian_coordinates()
+        p = particle.position.to_Point3D()
+        c = self.center.to_Point3D()
         return c.x - self.width / 2 <= p.x < c.x + self.width / 2 \
             and c.y - self.width / 2 <= p.y < c.y + self.width / 2 \
             and c.z - self.width / 2 <= p.z < c.z + self.width / 2
@@ -28,28 +28,28 @@ class OctCell(Cell):
 
 class OctTreeCell(OctCell):
 
-    def __init__(self, center: CartesianCoordinate, width: float, depth: int):
+    def __init__(self, center: Point3D, width: float, depth: int):
         super().__init__(center, width)
         if depth > 0:
             self.sub_cells: list[OctCell] = [
-                OctTreeCell(center + CartesianCoordinate(width / 4, width / 4, width / 4), width / 2, depth - 1),
-                OctTreeCell(center + CartesianCoordinate(-width / 4, width / 4, width / 4), width / 2, depth - 1),
-                OctTreeCell(center + CartesianCoordinate(width / 4, -width / 4, width / 4), width / 2, depth - 1),
-                OctTreeCell(center + CartesianCoordinate(-width / 4, -width / 4, width / 4), width / 2, depth - 1),
-                OctTreeCell(center + CartesianCoordinate(width / 4, width / 4, -width / 4), width / 2, depth - 1,),
-                OctTreeCell(center + CartesianCoordinate(-width / 4, width / 4, -width / 4), width / 2, depth - 1),
-                OctTreeCell(center + CartesianCoordinate(width / 4, -width / 4, -width / 4), width / 2, depth - 1),
-                OctTreeCell(center + CartesianCoordinate(-width / 4, -width / 4, -width / 4), width / 2, depth - 1)]
+                OctTreeCell(center + Point3D(width / 4, width / 4, width / 4), width / 2, depth - 1),
+                OctTreeCell(center + Point3D(-width / 4, width / 4, width / 4), width / 2, depth - 1),
+                OctTreeCell(center + Point3D(width / 4, -width / 4, width / 4), width / 2, depth - 1),
+                OctTreeCell(center + Point3D(-width / 4, -width / 4, width / 4), width / 2, depth - 1),
+                OctTreeCell(center + Point3D(width / 4, width / 4, -width / 4), width / 2, depth - 1,),
+                OctTreeCell(center + Point3D(-width / 4, width / 4, -width / 4), width / 2, depth - 1),
+                OctTreeCell(center + Point3D(width / 4, -width / 4, -width / 4), width / 2, depth - 1),
+                OctTreeCell(center + Point3D(-width / 4, -width / 4, -width / 4), width / 2, depth - 1)]
         else:
             self.sub_cells: list[OctCell] = [
-                OctLeafCell(center + CartesianCoordinate(width / 4, width / 4, width / 4), width / 2),
-                OctLeafCell(center + CartesianCoordinate(-width / 4, width / 4, width / 4), width / 2),
-                OctLeafCell(center + CartesianCoordinate(width / 4, -width / 4, width / 4), width / 2),
-                OctLeafCell(center + CartesianCoordinate(-width / 4, -width / 4, width / 4), width / 2),
-                OctLeafCell(center + CartesianCoordinate(width / 4, width / 4, -width / 4), width / 2),
-                OctLeafCell(center + CartesianCoordinate(-width / 4, width / 4, -width / 4), width / 2),
-                OctLeafCell(center + CartesianCoordinate(width / 4, -width / 4, -width / 4), width / 2),
-                OctLeafCell(center + CartesianCoordinate(-width / 4, -width / 4, -width / 4), width / 2)]
+                OctLeafCell(center + Point3D(width / 4, width / 4, width / 4), width / 2),
+                OctLeafCell(center + Point3D(-width / 4, width / 4, width / 4), width / 2),
+                OctLeafCell(center + Point3D(width / 4, -width / 4, width / 4), width / 2),
+                OctLeafCell(center + Point3D(-width / 4, -width / 4, width / 4), width / 2),
+                OctLeafCell(center + Point3D(width / 4, width / 4, -width / 4), width / 2),
+                OctLeafCell(center + Point3D(-width / 4, width / 4, -width / 4), width / 2),
+                OctLeafCell(center + Point3D(width / 4, -width / 4, -width / 4), width / 2),
+                OctLeafCell(center + Point3D(-width / 4, -width / 4, -width / 4), width / 2)]
 
     def compute_multipoles(self, m: int, n: int) -> complex:
         self.multipole = np.sum([m2m_kernel(cell, self, m, n) for cell in self.sub_cells]).item()
@@ -72,7 +72,7 @@ class OctTreeCell(OctCell):
 
 class OctLeafCell(OctCell):
 
-    def __init__(self, center: CartesianCoordinate, width: float):
+    def __init__(self, center: Point3D, width: float):
         super().__init__(center, width)
         self.particles: list[Particle] = []
 

@@ -1,14 +1,14 @@
-from coordinates import SphericalCoordinate, CartesianCoordinate
+from geolib.coordinates import Polar3D, Point3D
 
 from typing_extensions import Self
 
 
 class Cell:
-    center: SphericalCoordinate
+    center: Polar3D
     multipole: complex
 
-    def __init__(self, center: CartesianCoordinate):
-        self.center = center.as_spherical_coordinates()
+    def __init__(self, center: Point3D):
+        self.center = center.to_Polar3D()
         self.multipole = 0
 
     def compute_multipoles(self, m, n) -> complex:

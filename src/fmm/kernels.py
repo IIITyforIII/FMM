@@ -1,5 +1,6 @@
-from coordinates import SphericalCoordinate
-from particle import Particle
+from geolib.coordinates import Polar3D
+from geolib.cell import Cell
+from physlib.entities import Particle
 
 
 import numpy as np
@@ -7,12 +8,12 @@ import math
 import cmath
 
 
-def theta(r: SphericalCoordinate, m: int, n: int) -> complex:
+def theta(r: Polar3D, m: int, n: int) -> complex:
     # TODO Is P actually the number of permutations or something else
     return (-1)**m * (math.factorial(n - m) / r.r**(n + 1)) * math.perm(n, m) * math.cos(r.theta) * cmath.exp(1j * m * r.phi)
 
 
-def gamma(r: SphericalCoordinate, m: int, n: int) -> complex:
+def gamma(r: Polar3D, m: int, n: int) -> complex:
     # TODO Is P actually the number of permutations or something else
     return (-1)**m * (r.r**n / (math.factorial(n + m))) * math.perm(n, m) * math.cos(r.theta) * cmath.exp(1j * m * r.phi)
 
