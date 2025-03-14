@@ -1,5 +1,5 @@
 from fmm.kernels import p2p_kernel, p2m_kernel, m2m_kernel, m2p_kernel
-from cell import Cell
+from geolib.cell import Cell
 from physlib.entities import Particle
 from geolib.coordinates import Point3D
 
