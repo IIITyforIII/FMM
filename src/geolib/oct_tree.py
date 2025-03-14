@@ -2,6 +2,7 @@ from fmm.kernels import p2p_kernel, p2m_kernel, m2m_kernel, m2p_kernel
 from geolib.cell import Cell
 from physlib.entities import Particle
 from geolib.coordinates import Point3D
+from dataclasses import astuple
 
 import numpy as np
 
@@ -24,6 +25,15 @@ class OctCell(Cell):
         return c.x - self.width / 2 <= p.x < c.x + self.width / 2 \
             and c.y - self.width / 2 <= p.y < c.y + self.width / 2 \
             and c.z - self.width / 2 <= p.z < c.z + self.width / 2
+
+    def get_particle_position_list(self) ->list[np.ndarray]:
+        """
+        Get all particles in this OctCell
+
+        :return: list[np.ndarray] in the form [ndarray(x1,y1,z1), ndarray(x2,y2,z2),...] containing all the cartesian
+        positions for the particles contained in the OctCell
+        """
+        pass
 
 
 class OctTreeCell(OctCell):
@@ -69,6 +79,12 @@ class OctTreeCell(OctCell):
         for cell in self.sub_cells:
             cell.insert_particles([p for p in particles if cell.contains_particle(p)])
 
+    def get_particle_position_list(self) -> list[np.ndarray]:
+        particle_positions = []
+        for cell in self.sub_cells:
+            particle_positions += cell.get_particle_position_list()
+        return particle_positions
+
 
 class OctLeafCell(OctCell):
 
@@ -96,3 +112,10 @@ class OctLeafCell(OctCell):
 
     def insert_particles(self, particles: list[Particle]) -> None:
         self.particles += particles
+
+    def get_particle_position_list(self) -> list[np.ndarray]:
+        particle_positions = []
+        for p in self.particles:
+            position_point = astuple(p.position.to_Point3D())
+            particle_positions.append(np.array(position_point))
+        return particle_positions
