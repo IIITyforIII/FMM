@@ -92,4 +92,4 @@ class PlummerSphere(UniformSphere):
     @override
     def _sample_r(self, n: int = 1) -> np.ndarray:
         samples = self._rng.uniform(0,1,n)
-        return  np.pow(np.pow(samples, -2/3) - 1, -1/2)
+        return  np.power(np.power(samples, -2/3) - 1, -1/2)
