@@ -122,6 +122,21 @@ class OctDynamicCell(OctCell):
             self.multipole = np.sum([p2m_kernel(particle, self, m, n) for particle in self.particles]).item()
         return self.multipole
 
+    @override
+    def get_particle_position_list(self) -> list[np.ndarray]:
+        if not self.is_leaf:
+            particle_positions = []
+            for cell in self.sub_cells:
+                particle_positions += cell.get_particle_position_list()
+            return particle_positions
+        else:
+            particle_positions = []
+            for p in self.particles:
+                position_point = astuple(p.position.to_Point3D())
+                particle_positions.append(np.array(position_point))
+            return particle_positions
+
+
 class OctTreeCell(OctCell):
 
     def __init__(self, center: Point3D, width: float, depth: int):
