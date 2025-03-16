@@ -9,12 +9,10 @@ import cmath
 
 
 def theta(r: Polar3D, m: int, n: int) -> complex:
-    # TODO Is P actually the number of permutations or something else
     return (-1)**m * (math.factorial(n - m) / r.r**(n + 1)) * assoc_legendre_p(n, m, math.cos(r.theta)) * cmath.exp(1j * m * r.phi)
 
 
 def gamma(r: Polar3D, m: int, n: int) -> complex:
-    # TODO Is P actually the number of permutations or something else
     return (-1)**m * (r.r**n / (math.factorial(n + m))) * assoc_legendre_p(n, m, math.cos(r.theta)) * cmath.exp(1j * m * r.phi)
 
 

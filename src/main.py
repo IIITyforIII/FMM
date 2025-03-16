@@ -1,5 +1,6 @@
 from geolib.oct_tree import OctTreeCell
 from geolib.coordinates import Point3D
+from oct_tree import OctDynamicCell
 from physlib.entities import Particle
 from physlib.densityModels import UniformBox
 from os import write
@@ -18,7 +19,6 @@ import numpy as np
 # from utils.visualization import renderPointCloudInteractive, renderPointCloudDensityMap
 # # renderPointCloudInteractive(samples, scaleFactor=0.01, zoom=40)
 # renderPointCloudDensityMap(samples, radius=0.2, dimensions=(100,100,100), focalPoint=(0,0,0))
-
 
 # sim settins
 num_particles = 1500
@@ -40,12 +40,17 @@ resolution = 100
 #other
 trace_filename = "../traceData/trace1.npy"
 video_filename = "../heatmapVideos/video1.mp4"
+# for k in range(p - n + 1):
+#     for l in range(-k, k + 1, 1):
+#         print("M: " + str(abs(l)) + "  N:" + str(k))
+
 
 
 def run_simulation(num_particles, domain_width, domain_center, time_steps, step_length, p, m, n):
     # init
-    particles = [Particle(Point3D(p), Polar3D(0, 0, 0)) for p in UniformBox(domain_center, domain_width, domain_width, domain_width).sample(num_particles)]
-    oct_tree = OctTreeCell(domain_center, domain_width, 2)
+    particles = [Particle(Point3D(p), Polar3D(0, 0, 0)) for p in
+                 UniformBox(domain_center, domain_width, domain_width, domain_width).sample(num_particles)]
+    oct_tree = OctDynamicCell(domain_center, domain_width, 8)
     oct_tree.insert_particles(particles)
 
     # fmm loop
