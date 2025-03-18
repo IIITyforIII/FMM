@@ -1,13 +1,12 @@
-import importlib
-from typing import Tuple
-from numpy.typing import ArrayLike
+import jax.numpy as jnp
+from jax.typing import ArrayLike
 
 class nbodyDirectSimulator():
     '''
     Simulator for a n-body particle simulation using direct summation.
     Excpects natural units (G=1) in default, else use setG(). Calculations are performed unit agnostic.
     '''
-    def __init__(self, initPos: ArrayLike, initVel: ArrayLike, masses: ArrayLike, use_jax: bool = False) -> None:
+    def __init__(self, initPos: ArrayLike, initVel: ArrayLike, masses: ArrayLike) -> None:
         '''
         Parameters
         ----------
@@ -15,8 +14,8 @@ class nbodyDirectSimulator():
             Initial positional state of the N-Body system.
         initVel: ArrayLike
             Initial velocity state of the N-Body system.
-        use_gpu: bool
-            Flag if to use jax gpu acceleration.
+        masses: ArrayLike
+            Masses of the particles.
         '''
         # lazy loading of required modules
         # TODO
