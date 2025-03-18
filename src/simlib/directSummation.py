@@ -65,25 +65,30 @@ class nbodyDirectSimulator():
         '''
         self.G = g
 
-    def step(self, step_size: float = 0.1):
+    def step(self, dt: float = 0.1):
         '''
         Perform a simulation step in a given step size.
 
         Parameters
         ----------
-        step_size: float
+        dt: float
             Step size for integration.
         '''
         # calculate resulting accelerations using P2P kernel.
         acc = p2p.acceleration(self.pos, self.pos, self.G, self.masses)
         
         # integrate motion formula and update positions
-        self.vel = self.vel + step_size * acc 
-        self.pos = self.pos + step_size * self.vel
+        self.vel = self.vel + dt * acc 
+        self.pos = self.pos + dt * self.vel
 
     #TODO do adaptive time steps ,using jerk and snap
-    def blockStep(self, step_size: float = 0.1):
+    def blockStep(self, dt: float = 0.1):
         '''
         Perform a block step (adaptive stesize) of given total time.
+
+        Parameters
+        ----------
+        dt: float
+            Total time step to update simulation. 
         '''
         pass
