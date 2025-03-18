@@ -1,12 +1,14 @@
+from typing import Union, Tuple
 import jax.numpy as jnp
 from jax.typing import ArrayLike
+from simlib.kernels import p2p
 
 class nbodyDirectSimulator():
     '''
     Simulator for a n-body particle simulation using direct summation.
     Excpects natural units (G=1) in default, else use setG(). Calculations are performed unit agnostic.
     '''
-    def __init__(self, initPos: ArrayLike, initVel: ArrayLike, masses: ArrayLike) -> None:
+    def __init__(self, initPos: ArrayLike, initVel: ArrayLike, masses: Union[ArrayLike,float] = 1) -> None:
         '''
         Parameters
         ----------
@@ -15,45 +17,34 @@ class nbodyDirectSimulator():
         initVel: ArrayLike
             Initial velocity state of the N-Body system.
         masses: ArrayLike
-            Masses of the particles.
+            Masses of the particles or single mass for equally heavy particles.
         '''
-        # lazy loading of required modules
-        # TODO
-        import numpy as np
-        self.np = np
-        # self.use_jax= use_jax
-        # if use_jax:
-        #     self.np = importlib.import_module('jax.numpy')
-        # else:
-        #     self.np = importlib.import_module('numpy')
-
         # set state
-        self.pos = self.np.array(initPos)
+        self.pos = jnp.array(initPos, dtype= float).reshape(-1,3)
         self.num_particles = len(self.pos)
-        self.vel = self.np.array(initVel)
-        self.masses = self.np.array(masses)
+        self.vel = jnp.array(initVel, dtype = float).reshape(-1,3)
+        self.masses = jnp.array(masses, dtype=float).reshape(-1,1)
 
         self.t = 0
 
         # units
         self.G = 1
 
-
         if self.num_particles != len(self.vel):
             raise AssertionError('Size of position array does not match velocity array. ({} != {})'.format(self.num_particles, len(self.vel)))
 
-    def getState(self) -> Tuple[float, ArrayLike, ArrayLike]:
+    def getState(self) -> Tuple[float, list, list]:
         '''
         Returns the current state of the system.
 
         Returns
         -------
-        state: Tuple[float, ArrayLike, ArrayLike]
+        state: Tuple[float, list, list]
             State in form (time, positions, velocities).
         '''
-        return (self.t, self.pos, self.vel)
+        return self.t, self.pos.tolist(), self.vel.tolist()
 
-    def resetState(self, pos: ArrayLike, vel: ArrayLike, t: float = 0) -> None:   
+    def resetState(self, pos: ArrayLike, vel: ArrayLike, masses: Union[ArrayLike,float] = 1) -> None:   
         '''
         Resets the state of the system to a given state.
 
@@ -63,13 +54,12 @@ class nbodyDirectSimulator():
             Array of particle positions.
         vel: ArrayLike
             Array of particle velocities.
-
+        masses: [ArrayLike, float]
+            Array of masses.
         '''
-        self.pos = pos
-        self.vel = vel
-        self.t   = t
+        self.__init__(pos, vel, masses)
 
-    def setG(self, g: float):
+    def setG(self, g: float) -> None:
         '''
         Set gravitational constant G. Simulator is agnostic of used units. 
         '''
@@ -78,6 +68,22 @@ class nbodyDirectSimulator():
     def step(self, step_size: float = 0.1):
         '''
         Perform a simulation step in a given step size.
+
+        Parameters
+        ----------
+        step_size: float
+            Step size for integration.
         '''
-        #TODO
+        # calculate resulting accelerations using P2P kernel.
+        acc = p2p.acceleration(self.pos, self.pos, self.G, self.masses)
+        
+        # integrate motion formula and update positions
+        self.vel = self.vel + step_size * acc 
+        self.pos = self.pos + step_size * self.vel
+
+    #TODO do adaptive time steps ,using jerk and snap
+    def blockStep(self, step_size: float = 0.1):
+        '''
+        Perform a block step (adaptive stesize) of given total time.
+        '''
         pass

@@ -9,5 +9,6 @@ opencv-python~=4.11.0.86
 typing_extensions~=4.4.0
 jax
 vtk
+pandas
 
 scipy~=1.15.2

@@ -4,3 +4,4 @@ tqdm~=4.67.1
 
 jax[cuda12]
 vtk
+pandas
