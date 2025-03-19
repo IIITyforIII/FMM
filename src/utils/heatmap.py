@@ -34,7 +34,7 @@ def generate_heatmap(particle_positions, resolution, range):
     return heatmap
 
 
-def generate_video(filename, trajectory,  resolution, zoom_margin=0.01):
+def generate_video(filename, positions_data,  resolution, zoom_margin=0.01):
     plt.clf()
     fig, ax = plt.subplots()
     heatmap_img = ax.imshow(np.zeros((resolution, resolution)), origin="lower", cmap="inferno",
@@ -47,7 +47,7 @@ def generate_video(filename, trajectory,  resolution, zoom_margin=0.01):
     #for constant color scale and zoom
     x_min, x_max = -10, 10
     y_min, y_max = -10, 10
-    particle_positions = np.asarray([*trajectory.get(20).values()])
+    particle_positions = positions_data[0]
     heatmap = generate_heatmap(particle_positions, resolution, [[x_min, x_max], [y_min, y_max]])
     heatmap_img.set_data(heatmap.T)  # transposed because imshow expects y first
     # if frame == 1:
@@ -59,7 +59,7 @@ def generate_video(filename, trajectory,  resolution, zoom_margin=0.01):
     def update(frame, progressbar):
         # 2D array containing only the positions for the current frame
         if frame >= 1:
-            particle_positions = np.asarray([*trajectory.get(frame).values()])
+            particle_positions = positions_data[frame]
 
             """"# zoom to impoertant region (smart zoom)
             x_mean, y_mean = particle_positions[:, 0].mean(), particle_positions[:, 1].mean()
@@ -79,18 +79,10 @@ def generate_video(filename, trajectory,  resolution, zoom_margin=0.01):
         progressbar.update()
         return heatmap_img
 
-    progressbar = tqdm(total=len(trajectory), desc="Creating video: ")
+    progressbar = tqdm(total=len(positions_data), desc="Creating video: ")
     update_with_bar = partial(update, progressbar = progressbar)
-    ani = animation.FuncAnimation(fig, update_with_bar, frames=len(trajectory), interval=100)
+    ani = animation.FuncAnimation(fig, update_with_bar, frames=len(positions_data), interval=100)
     #writervideo = animation.FFMpegWriter(fps=60)
     #ani.save(filename, writer=writervideo)
     ani.save(filename, fps=10)
     #animation.save('animation.gif', writer='PillowWriter', fps=2)
-
-
-
-if __name__ == "__main__":
-    trajectory = readTrajectory("trajectory.csv")
-    frameCount = len(trajectory)
-
-    generate_video("video.mp4", trajectory, 100)

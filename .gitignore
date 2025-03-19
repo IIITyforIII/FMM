@@ -3,4 +3,5 @@
 *.pyc
 env/
 venv/
+traceData/
 
