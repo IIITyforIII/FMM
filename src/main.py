@@ -1,6 +1,6 @@
 from geolib.oct_tree import OctTreeCell
 from geolib.coordinates import Point3D
-from oct_tree import OctDynamicCell
+from geolib.oct_tree import OctDynamicCell
 from physlib.entities import Particle
 from physlib.densityModels import UniformBox
 from os import write
