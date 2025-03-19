@@ -110,13 +110,13 @@ class PlummerSphere(UniformSphere):
         vel = []
 
         for r in radius:
-            sample = self._rng.uniform([0,0], [1,1], 1)
+            sample = self._rng.uniform([0,0], [1,1], (1,2))[0]
             while 0.1 * sample[1] >= g(sample[0]):
-                sample = self._rng.uniform([0,0], [1,1], 1)
+                sample = self._rng.uniform([0,0], [1,1], (1,2))[0]
             q = sample[0]
             v = q*escape_vel(r)
 
-            sample = self._rng.uniform([0,0], [1,1], 1)
+            sample = self._rng.uniform([0,0], [1,1], (1,2))[0]
             w = (1-2*sample[0]) * v
             u = np.sqrt(np.power(v,2) - np.power(w,2)) * np.cos(2*np.pi*sample[1])
             v = np.sqrt(np.power(v,2) - np.power(w,2)) * np.sin(2*np.pi*sample[1])

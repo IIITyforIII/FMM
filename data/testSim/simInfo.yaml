@@ -1,0 +1,9 @@
+Init Model:
+  Name: Plummer
+  Core radius: 1
+  Particles: 100
+Units: Natural Units
+Total simulation time: 10
+Step size: 0.1
+Adaptive steps: false
+Frame frequency: 1

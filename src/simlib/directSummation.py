@@ -81,6 +81,9 @@ class nbodyDirectSimulator():
         self.vel = self.vel + dt * acc 
         self.pos = self.pos + dt * self.vel
 
+        # update time
+        self.t = self.t + dt
+
     #TODO do adaptive time steps ,using jerk and snap
     def blockStep(self, dt: float = 0.1):
         '''
@@ -92,3 +95,9 @@ class nbodyDirectSimulator():
             Total time step to update simulation. 
         '''
         pass
+
+    def getName(self) -> str:
+        return 'directSummation'
+
+    def getNumParticles(self) -> int:
+        return self.num_particles
