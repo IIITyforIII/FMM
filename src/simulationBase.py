@@ -118,17 +118,32 @@ def runSimulation(simulator: nbodyDirectSimulator, directory: str, total_time: f
             simulator.step(dt)
 
         if i%out_frequency == 0:
-            _,vel,pos = simulator.getState()
+            _,pos,vel= simulator.getState()
             writeState('{}/frame_{:04}.vtp'.format(str(simDir), i), pos, vel) # pyright: ignore
     
 
 if __name__ == '__main__': 
-    # pos,vel = createInitState(100)
-    # model = {'Name': 'Plummer', 'Core radius': 1, 'Particles': 100}
-    # simulator = nbodyDirectSimulator(pos, vel)
-    # writeMetaData('../data/testSim/simInfo.yaml', model,'Natural Units',10,0.1,False,1)
-    # runSimulation(simulator,'../data/testSim/',10,0.1)
-    from utils.dataIO import readVtp
-    from utils.visualization import renderPointCloudInteractive
-    data = readVtp('../data/testSim/directSummation/frame_0000.vtp')
-    renderPointCloudInteractive(data, 0.05)
+    # model params
+    num_particles = 1000
+    core_rad     = 10
+    # sim params
+    total_time = 50   
+    time_step  = 0.01 
+    path = '../data/testSim'
+
+    sim = False
+
+    if sim:
+        # logging 
+        model = {'Name': 'Plummer', 'Core radius': core_rad, 'Particles': num_particles}
+        writeMetaData(path+'/simInfo.yaml', model,'Natural Units',total_time=total_time,dt=time_step,adaptive=False,out_frequency=1)
+
+
+        # run simulation
+        pos,vel = createInitState(num_particles, core_rad=core_rad)
+        simulator = nbodyDirectSimulator(pos, vel)
+        runSimulation(simulator,path,total_time,time_step)
+
+    # anim results
+    from utils.visualization import animateTimeSeries
+    animateTimeSeries(path+'/directSummation', scaleFactor=0.2, interactive=False, animRate=20)

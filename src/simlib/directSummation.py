@@ -2,6 +2,7 @@ from typing import Union, Tuple
 import jax.numpy as jnp
 from jax.typing import ArrayLike
 from simlib.kernels import p2p
+from jax import config
 
 class nbodyDirectSimulator():
     '''
@@ -20,10 +21,11 @@ class nbodyDirectSimulator():
             Masses of the particles or single mass for equally heavy particles.
         '''
         # set state
-        self.pos = jnp.array(initPos, dtype= float).reshape(-1,3)
+        config.update("jax_enable_x64", True)
+        self.pos = jnp.array(initPos, dtype=jnp.float64).reshape(-1,3)
         self.num_particles = len(self.pos)
-        self.vel = jnp.array(initVel, dtype = float).reshape(-1,3)
-        self.masses = jnp.array(masses, dtype=float).reshape(-1,1)
+        self.vel = jnp.array(initVel, dtype = jnp.float64).reshape(-1,3)
+        self.masses = jnp.array(masses, dtype= float).reshape(-1,1)
 
         self.t = 0
 

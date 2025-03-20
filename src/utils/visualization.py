@@ -1,18 +1,22 @@
 from typing import Optional, Union
 from numpy import ndarray
+from pathlib import Path
 
 import vtkmodules.vtkInteractionStyle
 import vtkmodules.vtkRenderingOpenGL2
 import vtkmodules.vtkRenderingVolumeOpenGL2
 
+from vtkmodules.vtkIOXML import vtkXMLPolyDataReader 
 from vtkmodules.vtkCommonDataModel import vtkPolyData
 from vtkmodules.vtkCommonColor import vtkNamedColors
-from vtkmodules.vtkRenderingCore import vtkActor, vtkPointGaussianMapper, vtkRenderWindow, vtkRenderWindowInteractor, vtkRenderer, vtkVolume, vtkColorTransferFunction
+from vtkmodules.vtkRenderingCore import vtkActor, vtkGlyph3DMapper, vtkPointGaussianMapper, vtkPolyDataMapper, vtkRenderWindow, vtkRenderWindowInteractor, vtkRenderer, vtkVolume, vtkColorTransferFunction
 from vtkmodules.vtkCommonDataModel import vtkPiecewiseFunction
 from vtkmodules.vtkCommonCore import vtkPoints
 from vtkmodules.util.numpy_support import numpy_to_vtk
 from vtkmodules.vtkImagingHybrid import vtkGaussianSplatter
 from vtkmodules.vtkRenderingVolumeOpenGL2 import vtkSmartVolumeMapper
+from vtkmodules.vtkFiltersSources import vtkArrowSource
+from vtkmodules.vtkFiltersCore import vtkGlyph3D
 
 def renderPointCloudDensityMap(data: Union[ndarray, vtkPolyData], radius: float = 0.2, dimensions: tuple = (100,100,100), focalPoint: tuple = (0,0,0), zoom: float = 0, fixedWindow: Optional[tuple] = None):
     '''
@@ -93,7 +97,7 @@ def renderPointCloudDensityMap(data: Union[ndarray, vtkPolyData], radius: float 
 
     renWin = vtkRenderWindow()
     renWin.AddRenderer(ren)
-    renWin.SetSize(800,800)
+    renWin.SetSize(900,900)
     renWin.SetWindowName('VolumeData')
 
     # make it interactive
@@ -110,7 +114,7 @@ def renderPointCloudDensityMap(data: Union[ndarray, vtkPolyData], radius: float 
     iren.Start()
 
 
-def renderPointCloudInteractive(data: Union[ndarray, vtkPolyData], scaleFactor: float = 0.2, opacity: float = 1.0, focalPoint: tuple = (0,0,0), zoom: float = 0) -> None:
+def renderPointCloudInteractive(data: Union[ndarray, vtkPolyData], scaleFactor: float = 0.2, opacity: float = 1.0, focalPoint: tuple = (0,0,0), zoom: float = 0, visVelocities: bool = False) -> None:
     '''
     Visualize a point cloud in an interactive Window.
 
@@ -140,6 +144,19 @@ def renderPointCloudInteractive(data: Union[ndarray, vtkPolyData], scaleFactor: 
         data = vtkPolyData()
         data.SetPoints(points)
 
+    if visVelocities:
+        arrowSource = vtkArrowSource()
+        arrowSource.SetTipRadius(0.1)
+        arrowSource.SetShaftRadius(0.02)
+        glyph = vtkGlyph3D()
+        glyph.SetSourceConnection(arrowSource.GetOutputPort())
+        glyph.SetInputData(data)
+        glyph.SetVectorModeToUseVector()
+        glyph.SetScaleModeToScaleByVector()
+        glyph.SetScaleFactor(0.3)
+        velMapper = vtkPolyDataMapper()
+        velMapper.SetInputConnection(glyph.GetOutputPort())
+
     # map to render primitives
     mapper = vtkPointGaussianMapper()
     mapper.SetInputData(data)
@@ -151,14 +168,23 @@ def renderPointCloudInteractive(data: Union[ndarray, vtkPolyData], scaleFactor: 
     actor.GetProperty().SetColor(vtkNamedColors().GetColor3d('White'))
     actor.GetProperty().SetOpacity(opacity)
 
+    if visVelocities:
+        velActor =vtkActor()
+        velActor.SetMapper(velMapper)
+        velActor.GetProperty().SetColor(vtkNamedColors().GetColor3d('Grey'))
+        velActor.GetProperty().SetOpacity(opacity)
+
+
     # renderer and window
     ren = vtkRenderer()
     ren.AddActor(actor)
+    if visVelocities: 
+        ren.AddActor(velActor)
     ren.SetBackground(0,0,0)
 
     renWin = vtkRenderWindow()
     renWin.AddRenderer(ren)
-    renWin.SetSize(800,800)
+    renWin.SetSize(900,900)
     renWin.SetWindowName('Data')
 
     # make it interactive
@@ -170,5 +196,119 @@ def renderPointCloudInteractive(data: Union[ndarray, vtkPolyData], scaleFactor: 
     ren.ResetCamera()
     ren.GetActiveCamera().SetFocalPoint(*focalPoint)
     ren.GetActiveCamera().Zoom(zoom)
+    iren.Initialize()
+    iren.Start()
+
+def animateTimeSeries(directory: str,renderAsSpheres: bool = False, scaleFactor: float = 0.2, opacity: float = 1.0, focalPoint: tuple = (0,0,0), zoom: float = 0, interactive:bool = True, animRate: int = 100, create_video: bool = False):
+
+    #read out directory
+    path = Path(directory)
+    files = [str(f) for f in sorted(path.glob('frame_*.vtp'))]   
+
+    # create reader
+    reader = vtkXMLPolyDataReader()
+    reader.SetFileName(files[0])
+
+    if renderAsSpheres:
+        from vtkmodules.vtkFiltersSources import vtkSphereSource
+        sphereSource = vtkSphereSource()
+        sphereSource.SetRadius(scaleFactor)
+        sphereSource.SetThetaResolution(16) 
+        sphereSource.SetPhiResolution(16)
+
+        mapper = vtkGlyph3DMapper()
+        mapper.SetSourceConnection(sphereSource.GetOutputPort())
+    else:
+        mapper = vtkPointGaussianMapper()
+        mapper.SetScaleFactor(scaleFactor)
+    mapper.SetInputConnection(reader.GetOutputPort())
+
+
+    # create actor
+    actor = vtkActor()
+    actor.SetMapper(mapper)
+    actor.GetProperty().SetColor(vtkNamedColors().GetColor3d('White'))
+    if renderAsSpheres:
+        actor.GetProperty().SetOpacity(opacity)
+        actor.GetProperty().SetPointSize(1)
+
+    # renderer and window
+    ren = vtkRenderer()
+    ren.AddActor(actor)
+    ren.SetBackground(0,0,0)
+    renWin = vtkRenderWindow()
+    renWin.AddRenderer(ren)
+    renWin.SetSize(900,900)
+    renWin.SetWindowName('SimulationState')
+
+    # make it interactive
+    iren = vtkRenderWindowInteractor()
+    iren.SetRenderWindow(renWin)
+    iren.SetInteractorStyle(vtkmodules.vtkInteractionStyle.vtkInteractorStyleTrackballCamera())
+
+    # define frame update callback
+    class counter:
+        def __init__(self):
+            self.current_frame = 0
+        def increment(self):
+            self.current_frame += 1
+        def decrement(self):
+            self.current_frame -= 1 
+        def getCurrentFrame(self):
+            return self.current_frame
+
+    class keypressCallback():
+        def __init__(self, iren, counter:counter):
+            self.iren = iren
+            self.paused = False
+            self.counter = counter
+        def __call__(self, caller, event):
+            key = caller.GetKeySym()
+            if key == 'space':
+                if self.paused:
+                    self.iren.CreateRepeatingTimer(animRate)
+                    self.paused = False
+                else:
+                    self.iren.DestroyTimer()
+                    self.paused = True
+            if key == 'Right' and self.counter.getCurrentFrame() < len(files) - 1:
+                self.counter.increment()
+                print('Render Frame: ' + files[self.counter.getCurrentFrame()])
+                reader.SetFileName(files[self.counter.getCurrentFrame()])
+                reader.Update()
+                renWin.Render()
+            if key == 'Left' and self.counter.getCurrentFrame()> 0:
+                self.counter.decrement()
+                print('Render Frame: ' + files[self.counter.getCurrentFrame()])
+                reader.SetFileName(files[self.counter.getCurrentFrame()])
+                reader.Update()
+                renWin.Render()
+
+    class timerCallback():
+        def __init__(self, iren, counter:counter):
+            self.iren = iren
+            self.counter = counter
+        def __call__(self, caller, event):
+            if self.counter.getCurrentFrame() < len(files):
+                print('Render Frame: ' + files[self.counter.getCurrentFrame()])
+                reader.SetFileName(files[self.counter.getCurrentFrame()])
+                reader.Update()
+                renWin.Render()
+                self.counter.increment()
+
+
+    frameCounter = counter()
+    kCallback = keypressCallback(iren,frameCounter)
+    tCallback = timerCallback(iren,frameCounter)
+    iren.AddObserver('TimerEvent', tCallback)
+    iren.AddObserver('KeyPressEvent', kCallback)
+    iren.CreateRepeatingTimer(animRate)
+
+
+    # start render loop
+    ren.ResetCamera()
+    ren.GetActiveCamera().SetFocalPoint(*focalPoint)
+    ren.GetActiveCamera().Zoom(zoom)
+     
     iren.Initialize()
     iren.Start()
