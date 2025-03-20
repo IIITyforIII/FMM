@@ -11,14 +11,7 @@ from tqdm import tqdm
 import utils.visualization as vis
 import utils.heatmap as heatmap
 import numpy as np
-# t = PlummerSphere()
-#
-# samples = t.sample(int(1000000))
-# # samples = [Point3D(p) for p in samples]
-# # samples = np.array([x.to_list() for x in samples]).transpose()
-# from utils.visualization import renderPointCloudInteractive, renderPointCloudDensityMap
-# # renderPointCloudInteractive(samples, scaleFactor=0.01, zoom=40)
-# renderPointCloudDensityMap(samples, radius=0.2, dimensions=(100,100,100), focalPoint=(0,0,0))
+
 
 # sim settins
 num_particles = 1500
