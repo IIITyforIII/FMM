@@ -9,7 +9,8 @@ class Particle:
     def __init__(self, position: Union[Point3D, Polar3D], velocity: Polar3D = Polar3D(0.,0.,0.), mass: float = 1) -> None:
         self.position:     Polar3D = Polar3D(position) if isinstance(position, Point3D) else velocity
         self.velocity:     Polar3D = velocity
-        self.mass:         float   = mass 
+        self.acc:          Polar3D = Polar3D(0., 0., 0.)
+        self.mass:         float   = mass
 
 
 class Star(Particle):

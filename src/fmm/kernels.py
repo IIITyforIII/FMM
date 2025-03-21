@@ -8,28 +8,28 @@ import math
 import cmath
 
 
-def theta(r: Polar3D, m: int, n: int) -> complex:
+def theta(r: Polar3D, n: int, m: int) -> complex:
     return (-1)**m * (math.factorial(n - m) / r.r**(n + 1)) * assoc_legendre_p(n, m, math.cos(r.theta)) * cmath.exp(1j * m * r.phi)
 
 
-def gamma(r: Polar3D, m: int, n: int) -> complex:
+def gamma(r: Polar3D, n: int, m: int) -> complex:
     return (-1)**m * (r.r**n / (math.factorial(n + m))) * assoc_legendre_p(n, m, math.cos(r.theta)) * cmath.exp(1j * m * r.phi)
 
 
 def p2p_kernel(particle: Particle, particle_prime: Particle) -> float:
-    g = 6.67430e-11
+    g = 1#6.67430e-11
     return (g * particle_prime.mass * particle.mass) / np.linalg.norm((particle_prime.position - particle.position).to_Point3D().to_ndarray())
 
 
-def p2m_kernel(particle: Particle, cell: Cell, m: int, n: int) -> complex:
-    return particle.mass * gamma(particle.position - cell.center, m, n)
+def p2m_kernel(particle: Particle, cell: Cell, n: int, m: int) -> complex:
+    return particle.mass * gamma(particle.position - cell.center, n, m)
 
 
-def m2m_kernel(cell: Cell, cell_prime: Cell, m: int, n: int) -> complex:
+def m2m_kernel(from_cell: Cell, to_cell: Cell, n: int, m: int) -> complex:
     res = 0
     for k in range(n + 1):
         for l in range(-k, k + 1):
-            res += gamma(cell.center - cell_prime.center, l, k) * cell.compute_multipoles(m - l, n - k)
+            res += gamma(from_cell.center - to_cell.center, k, l) * from_cell.get_multipole(n - k, m - l)
     return res
 
 
@@ -37,6 +37,6 @@ def m2p_kernel(cell: Cell, particle: Particle, p: int, m: int, n: int) -> comple
     res = 0
     for k in range(p - n + 1):
         for l in range(-k, k + 1):
-            # TODO What is l* in the paper? Only thing I can think of is complex conjugate, but this does not make any sense
-            res += cell.multipole * theta(particle.position - cell.center, m + l, n + k)
+            if p >= n + k >= abs(m + l):
+                res += cell.get_multipole(k, l).conjugate() * theta(particle.position - cell.center, n + k, m + l)
     return res
