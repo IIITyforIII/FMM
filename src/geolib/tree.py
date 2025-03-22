@@ -4,9 +4,6 @@ import numpy as np
 import morton 
 import threading
 
-from physlib.entities import Particle
-from geolib.coordinates import Point3D, Polar3D
-
 def getMortonSortedPermutation(positions: np.ndarray, scaleFactor: int = int(10e6)) -> np.ndarray:
     '''
     Convert a List of points to their morton-order representation.
@@ -51,8 +48,8 @@ class Node():
 def determineChildDomain(node:Node, idx: int) -> tuple:
     center = (node.domainMin + node.domainMax)/2 
 
-    new_min = [node.domainMin[i] if ((idx >> i) & 1) == 0 else center[i] for i in range(3)]
-    new_max = [center[i] if ((idx >> i) & 1) == 0 else node.domainMax[i] for i in range(3)]
+    new_min = np.array([node.domainMin[i] if ((idx >> i) & 1) == 0 else center[i] for i in range(3)])
+    new_max = np.array([center[i] if ((idx >> i) & 1) == 0 else node.domainMax[i] for i in range(3)])
 
     return new_min, new_max
 

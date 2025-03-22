@@ -3,7 +3,7 @@ import jax.numpy as jnp
 import numpy as np
 from jax.typing import ArrayLike
 from geolib.coordinates import mapCartToPolar
-from geolib.tree import buildTree, insertParticle
+from geolib.tree import buildTree, getMortonSortedPermutation, insertParticle
 from simlib.kernels import p2p
 from jax import config
 from abc import ABC, abstractmethod
@@ -98,7 +98,7 @@ class nbodyDirectSimulator(Simulator):
         self.num_particles = len(self.pos)
         self.vel = jnp.array(initVel, dtype = jnp.float64).reshape(-1,3)
         self.masses = jnp.array(masses, dtype= float).reshape(-1,1)
-        
+
         self.t = 0
 
         # units
@@ -178,6 +178,8 @@ class fmmSimulator(Simulator):
         self.leafs = [None] * self.num_particles # leafs[idx] corresponds to the leaf node of particle idx -> use for misfit calc
         
         # tree
+        perm = jnp.array(getMortonSortedPermutation(np.asarray(self.pos)))  # morton sort the positions for spatial correlation especially for multithreading
+        self.pos = self.pos[perm]
         self.root = buildTree(self.pos, np.array(domainMin), np.array(domainMax), nCrit=32, nThreads=1)
         self.nCrit = nCrit
         self.nThreads = nThreads
