@@ -1,0 +1,26 @@
+-----------------------Introduction:-------------------------
+problem with direct summation (computational complexity)
+
+idea behind FMM (summarize near particles so that summation does not need to be computed between every particle
+
+
+-----------------------FMM Details---------------------
+what does each kernel do? (use graph from paper maybe)
+
+harmonic values / what are sensible simulation settings
+----------------------Implementation--------------------------
+maybe classes like particle etc. (i dont think they need to be explained but idk)
+
+
+Oct tree
+(Upward pass(calculation of multipoles) / Downward pass(calculation of accelerations of individual particles)
+
+
+
+VTK
+
+-------------------Approximation Error?------------------------
+
+
+
+-------------------------Summary?-------------------------
