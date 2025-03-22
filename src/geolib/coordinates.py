@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Optional, Union, List, Self
 from dataclasses import dataclass, astuple
 import numpy as np
+import jax.numpy as jnp
 
 
 @dataclass
@@ -39,7 +40,7 @@ class Polar3D:
     def to_Point3D(self: Self) -> Point3D:
         """
         Convert point to cartesian coordinates.
-        """
+    """
         x = self.r * np.sin(self.theta) * np.cos(self.phi)
         y = self.r * np.sin(self.theta) * np.sin(self.phi)
         z = self.r * np.cos(self.theta)
@@ -78,7 +79,7 @@ class Point3D:
             self.y = polar_or_x[1]
             self.z = polar_or_x[2]
         else:
-            raise TypeError('Invalid arguments: (float, float, float), (list[float|int]) of size 3 or (Polar3D) expected.')
+            raise TypeError('Invalid arguments: (float, float, float), (list[float|int]) of size 3 or (Polar3D) expected. {} given.'.format(type(polar_or_x)))
 
     def __add__(self: Self, other: Union[Point3D,Polar3D]) -> Point3D:
         return Point3D(self.x + other.x, self.y + other.y, self.z + other.z) if isinstance(other,Point3D) else self.__add__(other.to_Point3D())
@@ -106,4 +107,11 @@ class Point3D:
         Write attributes as a np.ndarray.
         """
         return np.array(self.to_list())
+
+
+def mapCartToPolar(cartesian: jnp.ndarray):
+        r = jnp.sqrt(cartesian[0]**2 + cartesian[1]**2 + cartesian[2]**2)
+        theta = jnp.where(r == 0, 0,jnp.arccos(cartesian[2]/ r))
+        phi = jnp.arctan2(cartesian[1] , cartesian[0]) 
+        return jnp.array([r, theta, phi])
 

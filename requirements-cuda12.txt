@@ -1,7 +1,15 @@
-numpy~=2.0.2
-matplotlib~=3.9.4
-tqdm~=4.67.1
+numpy>=2.0.2
+matplotlib>=3.9.4
+tqdm>=4.67.1
 
+typing~=3.7.4.3
+pandas~=2.2.3
+opencv-python~=4.11.0.86
+
+typing_extensions~=4.4.0
 jax[cuda12]
 vtk
 pandas
+morton-py
+
+scipy~=1.15.2

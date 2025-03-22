@@ -260,7 +260,7 @@ def animateTimeSeries(directory: str,renderAsSpheres: bool = False, scaleFactor:
     class keypressCallback():
         def __init__(self, iren, counter:counter):
             self.iren = iren
-            self.paused = False
+            self.paused = True
             self.counter = counter
         def __call__(self, caller, event):
             key = caller.GetKeySym()
@@ -273,13 +273,11 @@ def animateTimeSeries(directory: str,renderAsSpheres: bool = False, scaleFactor:
                     self.paused = True
             if key == 'Right' and self.counter.getCurrentFrame() < len(files) - 1:
                 self.counter.increment()
-                print('Render Frame: ' + files[self.counter.getCurrentFrame()])
                 reader.SetFileName(files[self.counter.getCurrentFrame()])
                 reader.Update()
                 renWin.Render()
             if key == 'Left' and self.counter.getCurrentFrame()> 0:
                 self.counter.decrement()
-                print('Render Frame: ' + files[self.counter.getCurrentFrame()])
                 reader.SetFileName(files[self.counter.getCurrentFrame()])
                 reader.Update()
                 renWin.Render()
@@ -297,9 +295,8 @@ def animateTimeSeries(directory: str,renderAsSpheres: bool = False, scaleFactor:
                 self.counter.increment()
 
 
-    frameCounter = counter()
-    kCallback = keypressCallback(iren,frameCounter)
-    tCallback = timerCallback(iren,frameCounter)
+    kCallback = keypressCallback(iren)
+    tCallback = timerCallback(iren)
     iren.AddObserver('TimerEvent', tCallback)
     iren.AddObserver('KeyPressEvent', kCallback)
     iren.CreateRepeatingTimer(animRate)

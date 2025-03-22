@@ -10,5 +10,6 @@ typing_extensions~=4.4.0
 jax
 vtk
 pandas
+morton-py
 
 scipy~=1.15.2

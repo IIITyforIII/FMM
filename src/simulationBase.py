@@ -1,5 +1,5 @@
 from jax.typing import ArrayLike
-from simlib.directSummation import nbodyDirectSimulator
+from simlib.simulators import nbodyDirectSimulator
 from physlib.densityModels import PlummerSphere
 from geolib.coordinates import Point3D
 from utils.dataIO import writeToVtp
@@ -145,5 +145,8 @@ if __name__ == '__main__':
         runSimulation(simulator,path,total_time,time_step)
 
     # anim results
-    from utils.visualization import animateTimeSeries
-    animateTimeSeries(path+'/directSummation', scaleFactor=0.2, interactive=False, animRate=20)
+    # from utils.visualization import animateTimeSeries
+    # animateTimeSeries(path+'/directSummation', scaleFactor=0.2, interactive=False, animRate=20)
+    pos,vel = createInitState(10, core_rad=core_rad)
+    from simlib.simulators import fmmSimulator
+    test = nbodyDirectSimulator(pos,vel)
