@@ -1,5 +1,5 @@
 from jax.typing import ArrayLike
-from simlib.simulators import nbodyDirectSimulator
+from simlib.simulators import Simulator
 from physlib.densityModels import PlummerSphere
 from geolib.coordinates import Point3D
 from utils.dataIO import writeToVtp
@@ -77,7 +77,7 @@ def writeMetaData(output: str, model: dict, units: str, total_time: float, dt: f
     with open(output,'w') as file:
         yaml.dump(meta, file, default_flow_style=False, allow_unicode=True, sort_keys=False)
 
-def runSimulation(simulator: nbodyDirectSimulator, directory: str, total_time: float, dt: float, adaptive: bool = False, out_frequency: int = 1) -> None: 
+def runSimulation(simulator: Simulator, directory: str, total_time: float, dt: float, adaptive: bool = False, out_frequency: int = 1) -> None: 
     '''
     Run a direct summation simulation
 
