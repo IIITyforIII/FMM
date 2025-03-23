@@ -32,6 +32,7 @@ def getMortonSortedPermutation(positions: np.ndarray, scaleFactor: int = int(10e
     return zOrder
 
 class Node():
+    '''Class representing a node of the oct-tree.'''
     def __init__(self, domMin: np.ndarray, domMax: np.ndarray, multiThreading: bool = False) -> None:
         self.isLeaf = True
         self.particleIds = []
@@ -46,6 +47,7 @@ class Node():
 
 
 def determineChildDomain(node:Node, idx: int) -> tuple:
+    '''Returns the domain a child node with index 0 <= idx < 8'''
     center = (node.domainMin + node.domainMax)/2 
 
     new_min = np.array([node.domainMin[i] if ((idx >> i) & 1) == 0 else center[i] for i in range(3)])
@@ -54,6 +56,7 @@ def determineChildDomain(node:Node, idx: int) -> tuple:
     return new_min, new_max
 
 def splitNode(positions: Union[np.ndarray,jnp.ndarray], leafs: Union[np.ndarray, jnp.ndarray], node: Node, nCrit: int, multiThreading):
+    ''' Splits a node into 8 childs, and distributes all particle ids it contains to its childs.'''
     node.children = [Node(*determineChildDomain(node,i)) for i in range(8)]
     buf = node.particleIds
     node.particleIds = []
@@ -64,6 +67,7 @@ def splitNode(positions: Union[np.ndarray,jnp.ndarray], leafs: Union[np.ndarray,
         del node.lock
 
 def determineOctantIdx(node: Node, pos: Union[np.ndarray, jnp.ndarray]) -> int:
+    '''Determine to which child a particle should be assigned.'''
     center = (node.domainMin + node.domainMax)/2 
 
     octant_idx = 0
@@ -73,6 +77,7 @@ def determineOctantIdx(node: Node, pos: Union[np.ndarray, jnp.ndarray]) -> int:
     return octant_idx
 
 def insertParticle(positions: Union[np.ndarray, jnp.ndarray], leafs: Union[np.ndarray, jnp.ndarray], partIdx: int, root:Node, nCrit: int, multiThreading: bool):
+    '''Insert the particle positions[partIdx] into the given root node.'''
     node = root
     while(node.isLeaf == False):
         idx = determineOctantIdx(node, positions[partIdx])
