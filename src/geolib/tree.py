@@ -6,7 +6,7 @@ import threading
 
 def getMortonSortedPermutation(positions: np.ndarray, scaleFactor: int = int(10e6)) -> np.ndarray:
     '''
-    Convert a List of points to their morton-order representation.
+    Get the sorting according to the morton order of an 3D array.
 
     Parameters
     ----------
@@ -106,8 +106,8 @@ def buildTree(positions: Union[np.ndarray,jnp.ndarray], domainMin: np.ndarray, d
     # create threads if needed
     if nThreads > 1:
         root = Node(domainMin, domainMax, True)
-        partBlock = int(positions.size/nThreads)
-        remainder = positions.size % nThreads
+        partBlock = int(len(positions)/nThreads)
+        remainder = len(positions) % nThreads
         def worker(threadId):
             if threadId <= nThreads:
                 print(20)
@@ -115,7 +115,7 @@ def buildTree(positions: Union[np.ndarray,jnp.ndarray], domainMin: np.ndarray, d
         threads = []
     else:
         root = Node(domainMin, domainMax)
-        for i in range(positions.size):
+        for i in range(len(positions)):
             insertParticle(positions, i, root, nCrit, False)
 
     return root

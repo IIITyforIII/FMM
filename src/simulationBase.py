@@ -147,6 +147,9 @@ if __name__ == '__main__':
     # anim results
     # from utils.visualization import animateTimeSeries
     # animateTimeSeries(path+'/directSummation', scaleFactor=0.2, interactive=False, animRate=20)
-    pos,vel = createInitState(10, core_rad=core_rad)
-    from simlib.simulators import fmmSimulator
-    test = nbodyDirectSimulator(pos,vel)
+    pos,vel = createInitState(10, core_rad=10)
+    print(pos)
+    from geolib.tree import Node, determineChildDomain, determineOctantIdx, buildTree
+    mi = np.array([-50,-50,-50])
+    ma = np.array([50,50,50])
+    root = buildTree(pos,mi, ma, nCrit=20, nThreads=1)
