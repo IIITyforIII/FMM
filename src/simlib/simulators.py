@@ -3,7 +3,7 @@ import jax.numpy as jnp
 import numpy as np
 from jax.typing import ArrayLike
 from geolib.coordinates import mapCartToPolar
-from geolib.tree import buildTree, getMortonSortedPermutation, insertParticle
+from geolib.tree import applyBoundaryCondition, buildTree, getMortonSortedPermutation, insertParticle
 from simlib.kernels import p2p
 from jax import config
 from abc import ABC, abstractmethod
@@ -175,12 +175,12 @@ class fmmSimulator(Simulator):
 
         # fmm related data
         self.polar = jnp.apply_along_axis(mapCartToPolar, 1, self.pos) # needed for spherical harmonics
-        self.leafs = [None] * self.num_particles # leafs[idx] corresponds to the leaf node of particle idx -> use for misfit calc
+        self.leafs = jnp.array([None] * len(self.pos)) # leafs[idx] corresponds to the leaf node of particle idx -> use for misfit calc
         
         # tree
         perm = jnp.array(getMortonSortedPermutation(np.asarray(self.pos)))  # morton sort the positions for spatial correlation especially for multithreading
         self.pos = self.pos[perm]
-        self.root = buildTree(self.pos, np.array(domainMin), np.array(domainMax), nCrit=32, nThreads=1)
+        self.root = buildTree(self.pos, self.leafs, np.array(domainMin), np.array(domainMax), nCrit=32, nThreads=1)
         self.nCrit = nCrit
         self.nThreads = nThreads
         self.multiThreaded = nThreads > 1

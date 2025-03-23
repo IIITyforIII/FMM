@@ -1,7 +1,7 @@
 from jax.typing import ArrayLike
 from simlib.simulators import Simulator
 from physlib.densityModels import PlummerSphere
-from geolib.coordinates import Point3D
+from geolib.coordinates import Point3D 
 from utils.dataIO import writeToVtp
 from vtkmodules.vtkCommonCore import vtkPoints
 from vtkmodules.vtkCommonDataModel import vtkPolyData
@@ -148,8 +148,17 @@ if __name__ == '__main__':
     # from utils.visualization import animateTimeSeries
     # animateTimeSeries(path+'/directSummation', scaleFactor=0.2, interactive=False, animRate=20)
     pos,vel = createInitState(10, core_rad=10)
-    print(pos)
-    from geolib.tree import Node, determineChildDomain, determineOctantIdx, buildTree
+    leafs = np.array([None] * len(pos))
+    from geolib.tree import Node, determineChildDomain, determineOctantIdx, buildTree, applyBoundaryCondition
+    from geolib.coordinates import mapCartToPolar
     mi = np.array([-50,-50,-50])
     ma = np.array([50,50,50])
-    root = buildTree(pos,mi, ma, nCrit=20, nThreads=1)
+    applyBoundaryCondition(mi, ma, pos)
+    print(pos)
+    root = buildTree(pos, leafs, mi, ma, 2, 0)
+    for l in leafs:
+        print(pos[l.particleIds])
+
+    # root = buildTree(pos,mi, ma, nCrit=5, nThreads=1)
+    # for c in root.children:
+    #     print(pos[c.particleIds])

@@ -35,7 +35,7 @@ class Node():
     def __init__(self, domMin: np.ndarray, domMax: np.ndarray, multiThreading: bool = False) -> None:
         self.isLeaf = True
         self.particleIds = []
-        self.multipole = []
+        self.multipoleExpansion = []
         self.domainMin = domMin
         self.domainMax = domMax
         self.children = []
@@ -53,14 +53,15 @@ def determineChildDomain(node:Node, idx: int) -> tuple:
 
     return new_min, new_max
 
-def splitNode(positions: Union[np.ndarray,jnp.ndarray], node: Node, nCrit: int, multiThreading):
+def splitNode(positions: Union[np.ndarray,jnp.ndarray], leafs: Union[np.ndarray, jnp.ndarray], node: Node, nCrit: int, multiThreading):
     node.children = [Node(*determineChildDomain(node,i)) for i in range(8)]
     buf = node.particleIds
     node.particleIds = []
     node.isLeaf = False
     for idx in buf:
-        insertParticle(positions, idx, node, nCrit, multiThreading)
-    del node.lock
+        insertParticle(positions, leafs, idx, node, nCrit, multiThreading)
+    if multiThreading:
+        del node.lock
 
 def determineOctantIdx(node: Node, pos: Union[np.ndarray, jnp.ndarray]) -> int:
     center = (node.domainMin + node.domainMax)/2 
@@ -71,7 +72,7 @@ def determineOctantIdx(node: Node, pos: Union[np.ndarray, jnp.ndarray]) -> int:
             octant_idx |= (1 << i)
     return octant_idx
 
-def insertParticle(positions: Union[np.ndarray, jnp.ndarray], partIdx: int, root:Node, nCrit: int, multiThreading: bool):
+def insertParticle(positions: Union[np.ndarray, jnp.ndarray], leafs: Union[np.ndarray, jnp.ndarray], partIdx: int, root:Node, nCrit: int, multiThreading: bool):
     node = root
     while(node.isLeaf == False):
         idx = determineOctantIdx(node, positions[partIdx])
@@ -79,13 +80,32 @@ def insertParticle(positions: Union[np.ndarray, jnp.ndarray], partIdx: int, root
     if multiThreading:
         node.lock.acquire_lock()
     node.particleIds.append(partIdx)
+    leafs[partIdx] = node
     if len(node.particleIds) > nCrit: 
-        splitNode(positions, node, nCrit, multiThreading)
+        splitNode(positions, leafs, node, nCrit, multiThreading)
     if multiThreading:
         if node.lock:
             node.lock.release()
 
-def buildTree(positions: Union[np.ndarray,jnp.ndarray], domainMin: np.ndarray, domainMax: np.ndarray, nCrit: int = 32, nThreads: int = 4) -> Node:
+def applyBoundaryCondition(domMin: Union[np.ndarray, jnp.ndarray], domMax: Union[np.ndarray, jnp.ndarray], positions: Union[np.ndarray,jnp.ndarray]):
+    '''
+    Aplly periodic boundary condition to a given domain. 
+
+    Parameters
+    ----------
+    domMin: ndarray
+        Minimum of the simulation domain.
+    domMax: ndarray
+        Maximum of the simulation domain.
+    positions: numpy.ndarray | jax.numpy.array
+        Positions that have to be in the domain.
+    '''
+    positions -= domMin
+    positions %= domMax - domMin
+    positions += domMin
+
+
+def buildTree(positions: Union[np.ndarray,jnp.ndarray], leafs: Union[np.ndarray, jnp.ndarray], domainMin: np.ndarray, domainMax: np.ndarray, nCrit: int = 32, nThreads: int = 4) -> Node:
     '''
     Build a oct-tree in a given domain.
 
@@ -102,7 +122,6 @@ def buildTree(positions: Union[np.ndarray,jnp.ndarray], domainMin: np.ndarray, d
     nThreads: int
         Number of threads in multithreaded execution.
     '''
-
     # create threads if needed
     if nThreads > 1:
         root = Node(domainMin, domainMax, True)
@@ -116,6 +135,6 @@ def buildTree(positions: Union[np.ndarray,jnp.ndarray], domainMin: np.ndarray, d
     else:
         root = Node(domainMin, domainMax)
         for i in range(len(positions)):
-            insertParticle(positions, i, root, nCrit, False)
+            insertParticle(positions, leafs, i, root, nCrit, False)
 
     return root
