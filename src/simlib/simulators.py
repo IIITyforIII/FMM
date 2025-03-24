@@ -175,7 +175,6 @@ class fmmSimulator(Simulator):
 
         # fmm related data
         self.expansionOrder = expansionOrder
-        self.polar = jnp.apply_along_axis(mapCartToPolar, 1, self.pos) # needed for spherical harmonics
         self.leafs = [None] * len(self.pos) # leafs[idx] corresponds to the leaf node of particle idx -> use for misfit calc
         
         # tree

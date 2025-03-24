@@ -93,14 +93,14 @@ class SphericalHarmonics():
         self.m_arr = np.hstack((range(m+1), range(-m,0)))
         self.m_arr = np.tile(self.m_arr, (n+1,1))
         self.n_arr = np.tile(range(n+1), (2*m + 1,1)).transpose()
-        print(self.m_arr)
-        print(self.n_arr)
 
     @staticmethod
     def theta(particle: jnp.ndarray):
+        '''Perform θ(r) on a given particel.'''
         pass
 
     def ypsilon(self, particle: jnp.ndarray):
+        '''Perform Υ(r) on a given particle.'''
         #polar coordinates
         pol = mapCartToPolar(particle)
 
@@ -109,7 +109,6 @@ class SphericalHarmonics():
         norm = factorial(self.n_arr + self.m_arr)
         norm = np.divide(r_n, norm, where=norm!=0, out=np.zeros_like(norm))
         norm.shape
-        print(norm)
 
         #legendre polynomials
         legendre = assoc_legendre_p_all(self.n,self.m,np.cos(pol[1]))[0]
