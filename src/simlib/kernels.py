@@ -117,4 +117,3 @@ class SphericalHarmonics():
         azim = np.exp(1j * self.m_arr * pol[2])        
 
         return self.condonPhase * norm * legendre * azim
-

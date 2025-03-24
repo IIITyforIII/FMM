@@ -1,10 +1,10 @@
-from typing import Union, Tuple
+from typing import Tuple
 import jax.numpy as jnp
 import numpy as np
 from jax.typing import ArrayLike
-from geolib.coordinates import mapCartToPolar
-from geolib.tree import applyBoundaryCondition, buildTree, getMortonSortedPermutation, insertParticle
-from simlib.kernels import p2p
+from geolib.expansionCentres import ExpansionCenter
+from geolib.tree import buildTree, getMortonSortedPermutation
+from simlib.kernels import SphericalHarmonics, p2p
 from jax import config
 from abc import ABC, abstractmethod
 
@@ -155,7 +155,7 @@ class fmmSimulator(Simulator):
     Simulator for a n-body particle simulation using fast multipole method.
     Excpects natural units (G=1) in default, else use setG(). Calculations are performed unit agnostic.
     '''
-    def __init__(self, initPos: ArrayLike, initVel: ArrayLike, domainMin, domainMax, masses: ArrayLike, expansionOrder: int, nCrit: int = 32, nThreads: int = 1) -> None:
+    def __init__(self, initPos: ArrayLike, initVel: ArrayLike, domainMin, domainMax, masses: ArrayLike, expansionOrder: int, multipoleExpandCenter: ExpansionCenter, potentialExpandCenter: ExpansionCenter, nCrit: int = 32, nThreads: int = 1) -> None:
         '''
         Parameters
         ----------
@@ -175,7 +175,10 @@ class fmmSimulator(Simulator):
 
         # fmm related data
         self.expansionOrder = expansionOrder
+        self.harmonics = SphericalHarmonics(self.expansionOrder, self.expansionOrder)
         self.leafs = [None] * len(self.pos) # leafs[idx] corresponds to the leaf node of particle idx -> use for misfit calc
+        self.multipoleExpandCenter = multipoleExpandCenter # defines computation method of multipole expansion center
+        self.potentialExpandCenter = potentialExpandCenter # defines computation method of potential/force expansion center
         
         # tree
         perm = jnp.array(getMortonSortedPermutation(np.asarray(self.pos)))  # morton sort the positions for spatial correlation especially for multithreading
@@ -214,6 +217,20 @@ class fmmSimulator(Simulator):
         # mfits = computeMisfits(self.pos, self.leafs)
         # for m in mfits:
         #    insertParticle(self.pos, m, self.root, self.nCrit, self.multiThreaded) 
+
+    # def computeMultipoles(positions: jnp.ndarray, root: Node, order: int) -> None:
+    #     '''
+    #     Traverse the tree root, and compute the Multipole expansions of given order.
+    #
+    #     positions: jnp.ndarray
+    #         Positions of all particles, used for multipole computation of leafs.
+    #     root: Node
+    #         Entry point of tree traversing algo.
+    #     order: int
+    #         Expansion order of multipole expansion -> n = m = order
+    #     '''
+    #     pass
+
 
     def getState(self) -> Tuple[float, list, list]:
         '''{}'''.format(Simulator.getState.__doc__)

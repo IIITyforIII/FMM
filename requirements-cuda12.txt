@@ -11,5 +11,6 @@ jax[cuda12]
 vtk
 pandas
 morton-py
+miniball
 
 scipy~=1.15.2

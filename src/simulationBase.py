@@ -1,4 +1,5 @@
 from jax.typing import ArrayLike
+from geolib.tree import applyBoundaryCondition
 from simlib.simulators import Simulator, nbodyDirectSimulator
 from physlib.densityModels import PlummerSphere
 from geolib.coordinates import Point3D 
@@ -149,17 +150,24 @@ if __name__ == '__main__':
     # anim results
     # from utils.visualization import animateTimeSeries
     # animateTimeSeries(path+'/directSummation', scaleFactor=0.2, interactive=False, animRate=20)
+
+
+    #notes for later ---> DONT FORGET BOUNDARYCONDITION outside of simulator
     pos,vel = createInitState(10, core_rad=10)
-    leafs = np.array([None] * len(pos))
-    from geolib.tree import Node, determineChildDomain, determineOctantIdx, buildTree, applyBoundaryCondition
-    from geolib.coordinates import mapCartToPolar
-    mi = np.array([-50,-50,-50])
-    ma = np.array([50,50,50])
-    applyBoundaryCondition(mi, ma, pos)
-    print(pos)
-    root = buildTree(pos, leafs, mi, ma, 2, 0)
-    for l in leafs:
-        print(pos[l.particleIds])
+    dMax = np.array([50,50,50])     
+    dMin = -1*dMax
+    mass = np.ones(len(pos))
+    applyBoundaryCondition(dMin, dMax, pos)
+
+    from simlib.simulators import fmmSimulator
+    from geolib.expansionCentres import SmallesEnclosingSphere, GeometricCenter, CenterOfMass
+    ses = SmallesEnclosingSphere(False)
+    geo = CenterOfMass(True)
+    test = fmmSimulator(pos,vel,dMin,dMax,mass,expansionOrder=3,potentialExpandCenter=ses,multipoleExpandCenter=geo, nCrit=3, nThreads=1)
+
+    # root = buildTree(pos, leafs, mi, ma, 2, 0)
+    # for l in leafs:
+    #     print(pos[l.particleIds])
 
     # root = buildTree(pos,mi, ma, nCrit=5, nThreads=1)
     # for c in root.children:
