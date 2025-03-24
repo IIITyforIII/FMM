@@ -3,7 +3,11 @@ Module contains kernel functions used in physical nBody simulations.
 '''
 from typing import Union
 import jax.numpy as jnp
+import numpy as np
+from scipy.special import factorial, assoc_legendre_p_all
 from jax import jacfwd, vmap
+
+from geolib.coordinates import mapCartToPolar
 
 class p2p():
     '''Particle-to-Particle (P2P) kernel.'''
@@ -71,3 +75,47 @@ class p2p():
        advection = mul(advection, vel)
        return advection + Ja        
     da_dtdt = snap
+
+class SphericalHarmonics():
+    '''
+    Compute spherical harmonics used in FMM for a given expansion order p.
+    Computes for all up to degree n and order m , see assoc_legendre_p_all()
+    '''
+    def __init__(self, n, m):
+        self.n = n
+        self.m = m
+        #condon shortney phase
+        self.condonPhase = np.ones(2*m+1)
+        self.condonPhase[1:m+1:2] = -1 
+        self.condonPhase[-1:-m-1:-2] = -1
+        self.condonPhase = np.tile(self.condonPhase, (n+1,1))
+        # create index matrizes
+        self.m_arr = np.hstack((range(m+1), range(-m,0)))
+        self.m_arr = np.tile(self.m_arr, (n+1,1))
+        self.n_arr = np.tile(range(n+1), (2*m + 1,1)).transpose()
+        print(self.m_arr)
+        print(self.n_arr)
+
+    @staticmethod
+    def theta(particle: jnp.ndarray):
+        pass
+
+    def ypsilon(self, particle: jnp.ndarray):
+        #polar coordinates
+        pol = mapCartToPolar(particle)
+
+        #normalization
+        r_n = pol[0]**self.n_arr
+        norm = factorial(self.n_arr + self.m_arr)
+        norm = np.divide(r_n, norm, where=norm!=0, out=np.zeros_like(norm))
+        norm.shape
+        print(norm)
+
+        #legendre polynomials
+        legendre = assoc_legendre_p_all(self.n,self.m,np.cos(pol[1]))[0]
+
+        #azimuthal term
+        azim = np.exp(1j * self.m_arr * pol[2])        
+
+        return self.condonPhase * norm * legendre * azim
+

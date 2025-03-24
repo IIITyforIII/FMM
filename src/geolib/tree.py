@@ -1,4 +1,4 @@
-from typing import Union
+from typing import List, Union
 import jax.numpy as jnp
 import numpy as np
 import morton 
@@ -11,7 +11,7 @@ def getMortonSortedPermutation(positions: np.ndarray, scaleFactor: int = int(10e
     Parameters
     ----------
     particles: np.ndarray
-        Positions to be sorted accoridng to morton-order.
+        Positions to be sorted accoridng to morton-order. (only numpy array as jax doesnt handle tolist())
     scaleFactor: int
         Scale factor to deal with decimal numbers. Will determine the accuracy of the sorted array (10e6 -> Removes all decimal digits after the sixth decimal place)
 
@@ -55,7 +55,7 @@ def determineChildDomain(node:Node, idx: int) -> tuple:
 
     return new_min, new_max
 
-def splitNode(positions: Union[np.ndarray,jnp.ndarray], leafs: Union[np.ndarray, jnp.ndarray], node: Node, nCrit: int, multiThreading):
+def splitNode(positions: Union[np.ndarray,jnp.ndarray], leafs: List, node: Node, nCrit: int, multiThreading):
     ''' Splits a node into 8 childs, and distributes all particle ids it contains to its childs.'''
     node.children = [Node(*determineChildDomain(node,i)) for i in range(8)]
     buf = node.particleIds
@@ -76,7 +76,7 @@ def determineOctantIdx(node: Node, pos: Union[np.ndarray, jnp.ndarray]) -> int:
             octant_idx |= (1 << i)
     return octant_idx
 
-def insertParticle(positions: Union[np.ndarray, jnp.ndarray], leafs: Union[np.ndarray, jnp.ndarray], partIdx: int, root:Node, nCrit: int, multiThreading: bool):
+def insertParticle(positions: Union[np.ndarray, jnp.ndarray], leafs: List, partIdx: int, root:Node, nCrit: int, multiThreading: bool):
     '''Insert the particle positions[partIdx] into the given root node.'''
     node = root
     while(node.isLeaf == False):
@@ -110,7 +110,7 @@ def applyBoundaryCondition(domMin: Union[np.ndarray, jnp.ndarray], domMax: Union
     positions += domMin
 
 
-def buildTree(positions: Union[np.ndarray,jnp.ndarray], leafs: Union[np.ndarray, jnp.ndarray], domainMin: np.ndarray, domainMax: np.ndarray, nCrit: int = 32, nThreads: int = 4) -> Node:
+def buildTree(positions: Union[np.ndarray,jnp.ndarray], leafs: List, domainMin: np.ndarray, domainMax: np.ndarray, nCrit: int = 32, nThreads: int = 4) -> Node:
     '''
     Build a oct-tree in a given domain.
 

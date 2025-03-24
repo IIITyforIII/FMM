@@ -22,7 +22,7 @@ class Simulator(ABC):
         pass
 
     @abstractmethod
-    def resetState(self, pos: ArrayLike, vel: ArrayLike, masses: Union[ArrayLike,float] = 1) -> None:   
+    def resetState(self, pos: ArrayLike, vel: ArrayLike, masses: ArrayLike) -> None:   
         '''
         Resets the state of the system to a given state.
 
@@ -81,7 +81,7 @@ class nbodyDirectSimulator(Simulator):
     Simulator for a n-body particle simulation using direct summation.
     Excpects natural units (G=1) in default, else use setG(). Calculations are performed unit agnostic.
     '''
-    def __init__(self, initPos: ArrayLike, initVel: ArrayLike, masses: Union[ArrayLike,float] = 1) -> None:
+    def __init__(self, initPos: ArrayLike, initVel: ArrayLike, masses: ArrayLike) -> None:
         '''
         Parameters
         ----------
@@ -111,7 +111,7 @@ class nbodyDirectSimulator(Simulator):
         '''{}'''.format(Simulator.getState.__doc__)
         return self.t, self.pos.tolist(), self.vel.tolist()
 
-    def resetState(self, pos: ArrayLike, vel: ArrayLike, masses: Union[ArrayLike,float] = 1) -> None:   
+    def resetState(self, pos: ArrayLike, vel: ArrayLike, masses: ArrayLike) -> None:   
         '''{}'''.format(Simulator.resetState.__doc__)
         self.__init__(pos, vel, masses)
 
@@ -155,7 +155,7 @@ class fmmSimulator(Simulator):
     Simulator for a n-body particle simulation using fast multipole method.
     Excpects natural units (G=1) in default, else use setG(). Calculations are performed unit agnostic.
     '''
-    def __init__(self, initPos: ArrayLike, initVel: ArrayLike, domainMin, domainMax, masses: Union[ArrayLike,float] = 1, nCrit: int = 32, nThreads: int = 1) -> None:
+    def __init__(self, initPos: ArrayLike, initVel: ArrayLike, domainMin, domainMax, masses: ArrayLike, expansionOrder: int, nCrit: int = 32, nThreads: int = 1) -> None:
         '''
         Parameters
         ----------
@@ -174,18 +174,19 @@ class fmmSimulator(Simulator):
         self.masses = jnp.array(masses, dtype= float).reshape(-1,1)
 
         # fmm related data
+        self.expansionOrder = expansionOrder
         self.polar = jnp.apply_along_axis(mapCartToPolar, 1, self.pos) # needed for spherical harmonics
-        self.leafs = jnp.array([None] * len(self.pos)) # leafs[idx] corresponds to the leaf node of particle idx -> use for misfit calc
+        self.leafs = [None] * len(self.pos) # leafs[idx] corresponds to the leaf node of particle idx -> use for misfit calc
         
         # tree
         perm = jnp.array(getMortonSortedPermutation(np.asarray(self.pos)))  # morton sort the positions for spatial correlation especially for multithreading
         self.pos = self.pos[perm]
-        self.root = buildTree(self.pos, self.leafs, np.array(domainMin), np.array(domainMax), nCrit=32, nThreads=1)
+        self.root = buildTree(self.pos, self.leafs, np.array(domainMin), np.array(domainMax), nCrit=nCrit, nThreads=nThreads)
         self.nCrit = nCrit
         self.nThreads = nThreads
         self.multiThreaded = nThreads > 1
 
-        self.t = 0
+        self.t = 0.
         # units
         self.G = 1
 
@@ -214,3 +215,27 @@ class fmmSimulator(Simulator):
         # mfits = computeMisfits(self.pos, self.leafs)
         # for m in mfits:
         #    insertParticle(self.pos, m, self.root, self.nCrit, self.multiThreaded) 
+
+    def getState(self) -> Tuple[float, list, list]:
+        '''{}'''.format(Simulator.getState.__doc__)
+        return self.t, self.pos.tolist(), self.vel.tolist() # pyright: ignore
+
+    def resetState(self, pos: ArrayLike, vel: ArrayLike, masses: ArrayLike) -> None:   
+        '''{}'''.format(Simulator.resetState.__doc__)
+        self.pos = jnp.array(pos).reshape(-1,3)
+        self.vel = jnp.array(vel).reshape(-1,3)
+        self.masses = jnp.array(masses).reshape(-1,1)
+
+    def setG(self, g: float) -> None:
+        '''{}'''.format(Simulator.setG.__doc__)
+        self.G = g
+
+    #TODO do adaptive time steps ,using jerk and snap
+    def blockStep(self, dt: float = 0.1):
+        pass
+
+    def getName(self) -> str:
+        return 'Fast Multipole Method'
+
+    def getNumParticles(self) -> int:
+        return self.num_particles
