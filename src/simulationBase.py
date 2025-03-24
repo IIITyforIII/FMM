@@ -1,5 +1,5 @@
 from jax.typing import ArrayLike
-from simlib.simulators import Simulator
+from simlib.simulators import Simulator, nbodyDirectSimulator
 from physlib.densityModels import PlummerSphere
 from geolib.coordinates import Point3D 
 from utils.dataIO import writeToVtp
@@ -9,6 +9,7 @@ from vtkmodules.util.numpy_support import numpy_to_vtk
 import numpy as np
 from pathlib import Path
 import yaml
+from tqdm import tqdm
 
 def createInitState(num_particles: int, core_rad: float = 1, center = [0,0,0]):
     '''
@@ -104,14 +105,15 @@ def runSimulation(simulator: Simulator, directory: str, total_time: float, dt: f
 
     # create simuation result folder   
     simDir = Path(directory+'/'+simulator.getName())
-    simDir.mkdir()
+    if not Path(simDir).exists():
+        simDir.mkdir()
 
     # write initial state
     _,pos,vel= simulator.getState()
     writeState('{}/frame_0000.vtp'.format(str(simDir)), pos, vel) # pyright: ignore
 
     # start loop
-    for i in range(1, int(total_time/dt) + 1):
+    for i in tqdm(range(1, int(total_time/dt) + 1)):
         if adaptive:
             simulator.blockStep(dt)
         else:
@@ -141,7 +143,7 @@ if __name__ == '__main__':
 
         # run simulation
         pos,vel = createInitState(num_particles, core_rad=core_rad)
-        simulator = nbodyDirectSimulator(pos, vel)
+        simulator = nbodyDirectSimulator(pos, vel, 1)
         runSimulation(simulator,path,total_time,time_step)
 
     # anim results
