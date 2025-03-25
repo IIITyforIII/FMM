@@ -3,8 +3,8 @@ import jax.numpy as jnp
 import numpy as np
 from jax.typing import ArrayLike
 from geolib.expansionCentres import ExpansionCenter
-from geolib.tree import buildTree, getMortonSortedPermutation
-from simlib.kernels import SphericalHarmonics, p2p
+from geolib.tree import buildTree, getMortonSortedPermutation, Node
+import simlib.kernels as kernels
 from jax import config
 from abc import ABC, abstractmethod
 
@@ -122,7 +122,7 @@ class nbodyDirectSimulator(Simulator):
     def step(self, dt: float = 0.1):
         '''{}'''.format(Simulator.step.__doc__)
         # calculate resulting accelerations using P2P kernel.
-        acc = p2p.acceleration(self.pos, self.pos, self.G, self.masses)
+        acc = kernels.p2p.acceleration(self.pos, self.pos, self.G, self.masses)
         
         # integrate motion formula and update positions
         self.vel = self.vel + dt * acc 
@@ -175,7 +175,7 @@ class fmmSimulator(Simulator):
 
         # fmm related data
         self.expansionOrder = expansionOrder
-        self.harmonics = SphericalHarmonics(self.expansionOrder, self.expansionOrder)
+        self.harmonics = kernels.SphericalHarmonics(self.expansionOrder, self.expansionOrder)
         self.leafs = [None] * len(self.pos) # leafs[idx] corresponds to the leaf node of particle idx -> use for misfit calc
         self.multipoleExpandCenter = multipoleExpandCenter # defines computation method of multipole expansion center
         self.potentialExpandCenter = potentialExpandCenter # defines computation method of potential/force expansion center
@@ -199,7 +199,7 @@ class fmmSimulator(Simulator):
         '''{}'''.format(Simulator.step.__doc__)
 
         ### compute multipoles
-        # comupteMultipoles(root)
+        self.computeMultipoles(self.root)
 
         ### compute fieldtensors/ accelerations -> traverse tree
         acc = jnp.array(self.num_particles)
@@ -255,3 +255,26 @@ class fmmSimulator(Simulator):
 
     def getNumParticles(self) -> int:
         return self.num_particles
+
+    def computeMultipoles(self, root: Node):
+        if root.isLeaf:
+            #compute expansion center
+            root.multipoleCenter = self.multipoleExpandCenter.computeExpCenter(self.pos,root,self.masses)
+
+            #compute multipole
+            if len(root.particleIds) > 0:
+                root.multipoleExpansion = kernels.p2m(self.pos[jnp.array(root.particleIds)], root.multipoleCenter[0], self.masses[jnp.array(root.particleIds)], self.harmonics)
+            else:
+                root.multipoleExpansion = 0 # pyright: ignore
+        else:
+            # traverse down the tree
+            for c in root.children:
+                self.computeMultipoles(c)
+
+            # compute expansion center
+            root.multipoleCenter = self.multipoleExpandCenter.computeExpCenter(self.pos,root,self.masses)
+
+            # compute multipole
+            root.multipoleExpansion = np.zeros(self.harmonics.n_arr.shape).astype(complex) # pyright: ignore
+            for c in root.children:
+                root.multipoleExpansion += kernels.m2m(c, root, self.harmonics)

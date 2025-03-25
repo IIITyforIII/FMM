@@ -152,7 +152,7 @@ if __name__ == '__main__':
     # animateTimeSeries(path+'/directSummation', scaleFactor=0.2, interactive=False, animRate=20)
 
 
-    #notes for later ---> DONT FORGET BOUNDARYCONDITION outside of simulator
+    #TODO notes for later ---> DONT FORGET BOUNDARYCONDITION outside of simulator
     pos,vel = createInitState(10, core_rad=10)
     dMax = np.array([50,50,50])     
     dMin = -1*dMax
