@@ -1,7 +1,7 @@
 '''
 Module contains kernel functions used in physical nBody simulations.
 '''
-from typing import Union
+from typing import Callable, Union
 import jax.numpy as jnp
 import numpy as np
 from scipy.special import factorial, assoc_legendre_p_all
@@ -97,9 +97,10 @@ class SphericalHarmonics():
     @staticmethod
     def theta(particle: jnp.ndarray):
         '''Perform θ(r) on a given particel.'''
+        #TODO
         pass
 
-    def ypsilon(self, particle: jnp.ndarray):
+    def ypsilon(self, particle: Union[np.ndarray,jnp.ndarray]):
         '''Perform Υ(r) on a given particle.'''
         #polar coordinates
         pol = mapCartToPolar(particle)
@@ -117,3 +118,16 @@ class SphericalHarmonics():
         azim = np.exp(1j * self.m_arr * pol[2])        
 
         return self.condonPhase * norm * legendre * azim
+
+def p2m(particles: jnp.ndarray, center: jnp.ndarray, masses: jnp.ndarray, harmonic: Callable): 
+    '''Compute the Particle-to-Multipole kernel.'''
+    res = particles - center
+    res = np.apply_along_axis(harmonic, 1, res)
+    res = masses.reshape(-1,1,1) * res
+    return res.sum(axis=0)
+
+def m2m():
+    '''Compute the Multipole-to-Multipole kernel.'''
+    pass
+
+

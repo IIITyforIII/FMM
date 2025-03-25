@@ -176,8 +176,7 @@ class fmmSimulator(Simulator):
         # fmm related data
         self.expansionOrder = expansionOrder
         self.harmonics = SphericalHarmonics(self.expansionOrder, self.expansionOrder)
-        self.leafs = [None] * len(self.pos) # leafs[idx] corresponds to the leaf node of particle idx -> use for misfit calc
-        self.multipoleExpandCenter = multipoleExpandCenter # defines computation method of multipole expansion center
+        self.leafs = [None] * len(self.pos) # leafs[idx] corresponds to the leaf node of particle idx -> use for misfit calc self.multipoleExpandCenter = multipoleExpandCenter # defines computation method of multipole expansion center
         self.potentialExpandCenter = potentialExpandCenter # defines computation method of potential/force expansion center
         
         # tree

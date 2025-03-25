@@ -108,8 +108,8 @@ class Point3D:
         """
         return np.array(self.to_list())
 
-
 def mapCartToPolar(cartesian: Union[jnp.ndarray,np.ndarray]):
+    '''Maps a singe point in cartesian coordinates to polar coordinates.'''
     mod = np
     if isinstance(cartesian, jnp.ndarray):
         mod = jnp
@@ -119,4 +119,3 @@ def mapCartToPolar(cartesian: Union[jnp.ndarray,np.ndarray]):
     theta = mod.where(r == 0, 0,jnp.arccos(cartesian[2]/ r))
     phi = mod.arctan2(cartesian[1] , cartesian[0]) 
     return mod.array([r, theta, phi])
-
