@@ -1,4 +1,6 @@
 from abc import ABC, abstractmethod
+from ctypes import ArgumentError
+from typing import Optional
 from geolib.tree import Node
 import numpy as np
 import jax.numpy as jnp
@@ -6,13 +8,13 @@ import miniball
 
 class ExpansionCenter(ABC):
     @abstractmethod
-    def computeExpCenter(self, positions: jnp.ndarray, node: Node) -> tuple:
+    def computeExpCenter(self, positions: jnp.ndarray, node: Node, masses: Optional[jnp.ndarray] = None) -> tuple:
         pass
 
 class GeometricCenter(ExpansionCenter):
     '''Class computing an expansion center as the geometric cell center.'''
 
-    def computeExpCenter(self, positions: jnp.ndarray, node: Node) -> tuple:
+    def computeExpCenter(self, positions: jnp.ndarray, node: Node, masses: Optional[jnp.ndarray] = None) -> tuple:
         return (node.domainMin + node.domainMax)/2 , 0
 
 class SmallesEnclosingSphere(ExpansionCenter):
@@ -20,7 +22,7 @@ class SmallesEnclosingSphere(ExpansionCenter):
     def __init__(self, multipole: bool) -> None:
         self.multipole = multipole
     
-    def computeExpCenter(self, positions: jnp.ndarray, node: Node) -> tuple:
+    def computeExpCenter(self, positions: jnp.ndarray, node: Node, masses: Optional[jnp.ndarray] = None) -> tuple:
         if node.isLeaf: 
             if len(node.particleIds)== 0:
                 return None, None
@@ -61,7 +63,9 @@ class CenterOfMass(ExpansionCenter):
     def __init__(self, multipole: bool) -> None:
         self.multipole = multipole
 
-    def computeExpCenter(self, positions: jnp.ndarray, masses: jnp.array, node: Node) -> tuple: # pyright: ignore
+    def computeExpCenter(self, positions: jnp.ndarray, node: Node, masses: Optional[jnp.ndarray] = None) -> tuple: 
+        if masses is None:
+            raise ArgumentError('Computation of center of mass, requires the masses.')
         if node.isLeaf:
             if len(node.particleIds) == 0:
                 return None, None

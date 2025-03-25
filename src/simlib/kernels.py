@@ -1,13 +1,14 @@
 '''
 Module contains kernel functions used in physical nBody simulations.
 '''
-from typing import Callable, Union
+from typing import Union
 import jax.numpy as jnp
 import numpy as np
 from scipy.special import factorial, assoc_legendre_p_all
 from jax import jacfwd, vmap
 
 from geolib.coordinates import mapCartToPolar
+from geolib.tree import Node
 
 class p2p():
     '''Particle-to-Particle (P2P) kernel.'''
@@ -100,16 +101,15 @@ class SphericalHarmonics():
         #TODO
         pass
 
-    def ypsilon(self, particle: Union[np.ndarray,jnp.ndarray]):
-        '''Perform Υ(r) on a given particle.'''
+    def ypsilon(self, pos: Union[np.ndarray,jnp.ndarray]):
+        '''Perform Υ(r) on a given position.'''
         #polar coordinates
-        pol = mapCartToPolar(particle)
+        pol = mapCartToPolar(pos)
 
         #normalization
         r_n = pol[0]**self.n_arr
         norm = factorial(self.n_arr + self.m_arr)
         norm = np.divide(r_n, norm, where=norm!=0, out=np.zeros_like(norm))
-        norm.shape
 
         #legendre polynomials
         legendre = assoc_legendre_p_all(self.n,self.m,np.cos(pol[1]))[0]
@@ -119,15 +119,43 @@ class SphericalHarmonics():
 
         return self.condonPhase * norm * legendre * azim
 
-def p2m(particles: jnp.ndarray, center: jnp.ndarray, masses: jnp.ndarray, harmonic: Callable): 
+def p2m(particles: jnp.ndarray, center: jnp.ndarray, masses: jnp.ndarray, harmonic: SphericalHarmonics): 
     '''Compute the Particle-to-Multipole kernel.'''
     res = particles - center
-    res = np.apply_along_axis(harmonic, 1, res)
+    res = np.apply_along_axis(harmonic.ypsilon, 1, res)
     res = masses.reshape(-1,1,1) * res
     return res.sum(axis=0)
 
-def m2m():
-    '''Compute the Multipole-to-Multipole kernel.'''
-    pass
+def m2m(child: Node, parent: Node, harmonic: SphericalHarmonics):
+    '''Compute the Multipole-to-Multipole kernel. Passing multipole expansion of child to parent.'''
+    shape = harmonic.n_arr.shape
+    res = np.zeros(shape).astype(complex)
 
+    # only compute if node contains particles
+    if not child.multipoleCenter[0] is None:
+        # precomputation
+        dist = child.multipoleCenter[0] - parent.multipoleCenter[0]
+        harm = harmonic.ypsilon(dist)
+        mult = np.array(child.multipoleExpansion)
+        expOrder = shape[0]
+        # funtion to compute a single index
+        # TODO: vectorization is hard... smh replace loops
+        def computeMnm(n, m):
+            res = 0.
+            for k in jnp.arange(n+1):
+                for l in jnp.arange(-k, k+1):
+                    n_k = n - k
+                    m_l = m - l
+                    # filter out orders out of bounds
+                    if jnp.abs(m_l) <= m_l:
+                        res += harm[k,l] * mult[n_k,m_l]
+            return res
 
+        # compute multipole
+        m_ids = np.hstack((np.arange(expOrder), np.arange(-1* expOrder + 1, 0)))
+        n_ids = np.arange(expOrder)
+        for n in n_ids:
+            for m in m_ids:
+                res[n,m] = computeMnm(n,m)
+
+    return res

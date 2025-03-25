@@ -110,12 +110,7 @@ class Point3D:
 
 def mapCartToPolar(cartesian: Union[jnp.ndarray,np.ndarray]):
     '''Maps a singe point in cartesian coordinates to polar coordinates.'''
-    mod = np
-    if isinstance(cartesian, jnp.ndarray):
-        mod = jnp
-    if isinstance(cartesian, np.ndarray):
-        mod = np
-    r = mod.sqrt(cartesian[0]**2 + cartesian[1]**2 + cartesian[2]**2)
-    theta = mod.where(r == 0, 0,jnp.arccos(cartesian[2]/ r))
-    phi = mod.arctan2(cartesian[1] , cartesian[0]) 
-    return mod.array([r, theta, phi])
+    r = jnp.sqrt(cartesian[0]**2 + cartesian[1]**2 + cartesian[2]**2)
+    theta = jnp.where(r==0, 0.,jnp.arccos(cartesian[2]/ r))
+    phi = jnp.arctan2(cartesian[1] , cartesian[0]) 
+    return jnp.array([r, theta, phi])
