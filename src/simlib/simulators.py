@@ -2,7 +2,7 @@ from typing import Tuple
 import jax.numpy as jnp
 import numpy as np
 from jax.typing import ArrayLike
-from geolib.expansionCentres import ExpansionCenter
+from geolib.expansionCentres import CenterOfMass, SmallesEnclosingSphere
 from geolib.tree import buildTree, getMortonSortedPermutation, Node
 import simlib.kernels as kernels
 from jax import config
@@ -155,7 +155,7 @@ class fmmSimulator(Simulator):
     Simulator for a n-body particle simulation using fast multipole method.
     Excpects natural units (G=1) in default, else use setG(). Calculations are performed unit agnostic.
     '''
-    def __init__(self, initPos: ArrayLike, initVel: ArrayLike, domainMin, domainMax, masses: ArrayLike, expansionOrder: int, multipoleExpandCenter: ExpansionCenter, potentialExpandCenter: ExpansionCenter, nCrit: int = 32, nThreads: int = 1) -> None:
+    def __init__(self, initPos: ArrayLike, initVel: ArrayLike, domainMin, domainMax, masses: ArrayLike, expansionOrder: int, nCrit: int = 32, nThreads: int = 1) -> None:
         '''
         Parameters
         ----------
@@ -177,8 +177,8 @@ class fmmSimulator(Simulator):
         self.expansionOrder = expansionOrder
         self.harmonics = kernels.SphericalHarmonics(self.expansionOrder, self.expansionOrder)
         self.leafs = [None] * len(self.pos) # leafs[idx] corresponds to the leaf node of particle idx -> use for misfit calc
-        self.multipoleExpandCenter = multipoleExpandCenter # defines computation method of multipole expansion center
-        self.potentialExpandCenter = potentialExpandCenter # defines computation method of potential/force expansion center
+        self.multipoleExpandCenter = SmallesEnclosingSphere(multipole=True) if expansionOrder >= 8 else CenterOfMass(multipole=True) # defines computation method of multipole expansion center
+        self.potentialExpandCenter = SmallesEnclosingSphere(multipole=False) # defines computation method of potential/force expansion center
 
         # tree
         perm = jnp.array(getMortonSortedPermutation(np.asarray(self.pos)))  # morton sort the positions for spatial correlation especially for multithreading
@@ -199,7 +199,7 @@ class fmmSimulator(Simulator):
         '''{}'''.format(Simulator.step.__doc__)
 
         ### compute multipoles
-        self.computeMultipoles(self.root)
+        self.computeCentersAndMultipoles(self.root)
 
         ### compute fieldtensors/ accelerations -> traverse tree
         acc = jnp.array(self.num_particles)
@@ -256,10 +256,12 @@ class fmmSimulator(Simulator):
     def getNumParticles(self) -> int:
         return self.num_particles
 
-    def computeMultipoles(self, root: Node):
+    def computeCentersAndMultipoles(self, root: Node):
+        '''Traverse over tree and compute expansion centers and multipole, preparion potential computation.'''
         if root.isLeaf:
-            #compute expansion center
+            #update expansion centers
             root.multipoleCenter = self.multipoleExpandCenter.computeExpCenter(self.pos,root,self.masses)
+            root.potentialCenter = self.potentialExpandCenter.computeExpCenter(self.pos,root,self.masses)
 
             #compute multipole
             if len(root.particleIds) > 0:
@@ -269,10 +271,12 @@ class fmmSimulator(Simulator):
         else:
             # traverse down the tree
             for c in root.children:
-                self.computeMultipoles(c)
+                self.computeCentersAndMultipoles(c)
 
-            # compute expansion center
+            # update expansion center
             root.multipoleCenter = self.multipoleExpandCenter.computeExpCenter(self.pos,root,self.masses)
+            root.potentialCenter = self.potentialExpandCenter.computeExpCenter(self.pos,root,self.masses)
+
 
             # compute multipole
             root.multipoleExpansion = np.zeros(self.harmonics.n_arr.shape).astype(complex) # pyright: ignore

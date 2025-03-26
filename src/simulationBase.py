@@ -153,7 +153,12 @@ if __name__ == '__main__':
 
 
     #TODO notes for later ---> DONT FORGET BOUNDARYCONDITION outside of simulator
-    pos,vel = createInitState(10, core_rad=10)
+    import time
+    start = time.time()
+    pos,vel = createInitState(1000, core_rad=10)
+    end = time.time()
+    print('State prep:')
+    print(end - start)
     dMax = np.array([50,50,50])     
     dMin = -1*dMax
     mass = np.ones(len(pos))
@@ -161,9 +166,14 @@ if __name__ == '__main__':
 
     from simlib.simulators import fmmSimulator
     from geolib.expansionCentres import SmallesEnclosingSphere, GeometricCenter, CenterOfMass
-    ses = SmallesEnclosingSphere(False)
-    geo = CenterOfMass(True)
-    test = fmmSimulator(pos,vel,dMin,dMax,mass,expansionOrder=3,potentialExpandCenter=ses,multipoleExpandCenter=geo, nCrit=3, nThreads=1)
+    test = fmmSimulator(pos,vel,dMin,dMax,mass,expansionOrder=3, nCrit=500, nThreads=1)
+
+    # directTest = nbodyDirectSimulator(pos,vel,mass)
+    # start = time.time()
+    # directTest.step(0.1)
+    # end = time.time()
+    # print('direct sum step:')
+    # print(end - start)
 
     # root = buildTree(pos, leafs, mi, ma, 2, 0)
     # for l in leafs:
