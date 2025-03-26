@@ -8,13 +8,13 @@ import miniball
 
 class ExpansionCenter(ABC):
     @abstractmethod
-    def computeExpCenter(self, positions: jnp.ndarray, node: Node, masses: Optional[jnp.ndarray] = None) -> tuple:
+    def computeExpCenter(self, positions: np.ndarray, node: Node, masses: Optional[np.ndarray] = None) -> tuple:
         pass
 
 class GeometricCenter(ExpansionCenter):
     '''Class computing an expansion center as the geometric cell center.'''
 
-    def computeExpCenter(self, positions: jnp.ndarray, node: Node, masses: Optional[jnp.ndarray] = None) -> tuple:
+    def computeExpCenter(self, positions: np.ndarray, node: Node, masses: Optional[np.ndarray] = None) -> tuple:
         return (node.domainMin + node.domainMax)/2 , 0
 
 class SmallesEnclosingSphere(ExpansionCenter):
@@ -22,11 +22,11 @@ class SmallesEnclosingSphere(ExpansionCenter):
     def __init__(self, multipole: bool) -> None:
         self.multipole = multipole
     
-    def computeExpCenter(self, positions: jnp.ndarray, node: Node, masses: Optional[jnp.ndarray] = None) -> tuple:
+    def computeExpCenter(self, positions: np.ndarray, node: Node, masses: Optional[np.ndarray] = None) -> tuple:
         if node.isLeaf: 
             if len(node.particleIds)== 0:
                 return None, None
-            parts = np.asarray(positions[jnp.array(node.particleIds)])
+            parts = positions[node.particleIds]
             if len(parts)>1:
                 center, radius = miniball.get_bounding_ball(parts)
             else:
@@ -63,14 +63,14 @@ class CenterOfMass(ExpansionCenter):
     def __init__(self, multipole: bool) -> None:
         self.multipole = multipole
 
-    def computeExpCenter(self, positions: jnp.ndarray, node: Node, masses: Optional[jnp.ndarray] = None) -> tuple: 
+    def computeExpCenter(self, positions: np.ndarray, node: Node, masses: Optional[np.ndarray] = None) -> tuple: 
         if masses is None:
             raise ArgumentError('Computation of center of mass, requires the masses.')
         if node.isLeaf:
             if len(node.particleIds) == 0:
                 return None, None
-            p = np.asarray(positions[jnp.array(node.particleIds)])
-            m = np.asarray(masses[jnp.array(node.particleIds)])
+            p = positions[node.particleIds]
+            m = masses[node.particleIds]
             p = p * m
             m = m.sum()
             return p.sum(axis=0)/m, m

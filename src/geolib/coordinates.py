@@ -108,9 +108,9 @@ class Point3D:
         """
         return np.array(self.to_list())
 
-def mapCartToPolar(cartesian: Union[jnp.ndarray,np.ndarray]):
+def mapCartToPolar(cartesian: np.ndarray):
     '''Maps a singe point in cartesian coordinates to polar coordinates.'''
-    r = jnp.sqrt(cartesian[0]**2 + cartesian[1]**2 + cartesian[2]**2)
-    theta = jnp.where(r==0, 0.,jnp.arccos(cartesian[2]/ r))
-    phi = jnp.arctan2(cartesian[1] , cartesian[0]) 
-    return jnp.array([r, theta, phi])
+    r = np.sqrt(cartesian[0]**2 + cartesian[1]**2 + cartesian[2]**2)
+    theta = jnp.arccos(cartesian[2]/ r) if r!=0 else 0.
+    phi = np.arctan2(cartesian[1] , cartesian[0]) 
+    return np.array([r, theta, phi])

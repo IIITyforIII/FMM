@@ -167,26 +167,38 @@ class fmmSimulator(Simulator):
             Masses of the particles or single mass for equally heavy particles.
         '''
         # set state
-        config.update("jax_enable_x64", True)
-        self.pos = jnp.array(initPos, dtype=jnp.float64).reshape(-1,3)
+        self.pos = np.array(initPos, dtype=np.float64).reshape(-1,3)
         self.num_particles = len(self.pos)
-        self.vel = jnp.array(initVel, dtype = jnp.float64).reshape(-1,3)
-        self.masses = jnp.array(masses, dtype= float).reshape(-1,1)
+        self.vel = np.array(initVel, dtype =np.float64).reshape(-1,3)
+        self.masses = np.array(masses, dtype=np.float64).reshape(-1,1)
 
         # fmm related data
         self.expansionOrder = expansionOrder
         self.harmonics = kernels.SphericalHarmonics(self.expansionOrder, self.expansionOrder)
-        self.leafs = [None] * len(self.pos) # leafs[idx] corresponds to the leaf node of particle idx -> use for misfit calc
-        self.multipoleExpandCenter = SmallesEnclosingSphere(multipole=True) if expansionOrder >= 8 else CenterOfMass(multipole=True) # defines computation method of multipole expansion center
+        self.leafs = np.array([None] * len(self.pos)) # leafs[idx] corresponds to the leaf node of particle idx -> use for misfit calc
+        self.multipoleExpandCenter = None if expansionOrder >= 8 else CenterOfMass(multipole=True) # defines computation method of multipole expansion center
         self.potentialExpandCenter = SmallesEnclosingSphere(multipole=False) # defines computation method of potential/force expansion center
 
         # tree
-        perm = jnp.array(getMortonSortedPermutation(np.asarray(self.pos)))  # morton sort the positions for spatial correlation especially for multithreading
+        perm = getMortonSortedPermutation(self.pos)  # morton sort the positions for spatial correlation especially for multithreading
         self.pos = self.pos[perm]
+        import time
+        start = time.time()
         self.root = buildTree(self.pos, self.leafs, np.array(domainMin), np.array(domainMax), nCrit=nCrit, nThreads=nThreads)
+        end = time.time()
+        print('tree build')
+        print(end - start)
         self.nCrit = nCrit
         self.nThreads = nThreads
         self.multiThreaded = nThreads > 1
+
+        start = time.time()
+        self.computeCentersAndMultipoles(self.root)
+        end =time.time()
+        print('multipoles')
+        print(end - start)
+        print(self.root.multipoleCenter)
+        print(self.root.multipoleExpansion)
 
         self.t = 0.
         # units
@@ -202,7 +214,7 @@ class fmmSimulator(Simulator):
         self.computeCentersAndMultipoles(self.root)
 
         ### compute fieldtensors/ accelerations -> traverse tree
-        acc = jnp.array(self.num_particles)
+        acc = np.array(self.num_particles)
         # traverseTreeSimple(root) / traverseTreeDual(root)
 
         ### update
@@ -238,9 +250,9 @@ class fmmSimulator(Simulator):
 
     def resetState(self, pos: ArrayLike, vel: ArrayLike, masses: ArrayLike) -> None:   
         '''{}'''.format(Simulator.resetState.__doc__)
-        self.pos = jnp.array(pos).reshape(-1,3)
-        self.vel = jnp.array(vel).reshape(-1,3)
-        self.masses = jnp.array(masses).reshape(-1,1)
+        self.pos = np.array(pos).reshape(-1,3)
+        self.vel = np.array(vel).reshape(-1,3)
+        self.masses = np.array(masses).reshape(-1,1)
 
     def setG(self, g: float) -> None:
         '''{}'''.format(Simulator.setG.__doc__)
@@ -260,12 +272,12 @@ class fmmSimulator(Simulator):
         '''Traverse over tree and compute expansion centers and multipole, preparion potential computation.'''
         if root.isLeaf:
             #update expansion centers
-            root.multipoleCenter = self.multipoleExpandCenter.computeExpCenter(self.pos,root,self.masses)
             root.potentialCenter = self.potentialExpandCenter.computeExpCenter(self.pos,root,self.masses)
+            root.multipoleCenter = self.multipoleExpandCenter.computeExpCenter(self.pos,root,self.masses) if self.multipoleExpandCenter is not None else root.potentialCenter
 
             #compute multipole
             if len(root.particleIds) > 0:
-                root.multipoleExpansion = kernels.p2m(self.pos[jnp.array(root.particleIds)], root.multipoleCenter[0], self.masses[jnp.array(root.particleIds)], self.harmonics)
+                root.multipoleExpansion = kernels.p2m(self.pos, root.particleIds, root.multipoleCenter[0], self.masses, self.harmonics)
             else:
                 root.multipoleExpansion = 0 # pyright: ignore
         else:
@@ -274,8 +286,8 @@ class fmmSimulator(Simulator):
                 self.computeCentersAndMultipoles(c)
 
             # update expansion center
-            root.multipoleCenter = self.multipoleExpandCenter.computeExpCenter(self.pos,root,self.masses)
             root.potentialCenter = self.potentialExpandCenter.computeExpCenter(self.pos,root,self.masses)
+            root.multipoleCenter = self.multipoleExpandCenter.computeExpCenter(self.pos,root,self.masses) if self.multipoleExpandCenter is not None else root.potentialCenter
 
 
             # compute multipole

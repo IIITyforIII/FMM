@@ -96,12 +96,12 @@ class SphericalHarmonics():
         self.n_arr = np.tile(range(n+1), (2*m + 1,1)).transpose()
 
     @staticmethod
-    def theta(particle: jnp.ndarray):
+    def theta(particle: np.ndarray):
         '''Perform θ(r) on a given particel.'''
         #TODO
         pass
 
-    def ypsilon(self, pos: Union[np.ndarray,jnp.ndarray]):
+    def ypsilon(self, pos: np.ndarray):
         '''Perform Υ(r) on a given position.'''
         #polar coordinates
         pol = mapCartToPolar(pos)
@@ -119,11 +119,11 @@ class SphericalHarmonics():
 
         return self.condonPhase * norm * legendre * azim
 
-def p2m(particles: jnp.ndarray, center: jnp.ndarray, masses: jnp.ndarray, harmonic: SphericalHarmonics): 
+def p2m(particles: np.ndarray, partIds: np.ndarray, center: np.ndarray, masses: np.ndarray, harmonic: SphericalHarmonics): 
     '''Compute the Particle-to-Multipole kernel.'''
-    res = particles - center
+    res = particles[partIds] - center
     res = np.apply_along_axis(harmonic.ypsilon, 1, res)
-    res = masses.reshape(-1,1,1) * res
+    res = masses[partIds].reshape(-1,1,1) * res
     return res.sum(axis=0)
 
 def m2m(child: Node, parent: Node, harmonic: SphericalHarmonics):
@@ -136,7 +136,7 @@ def m2m(child: Node, parent: Node, harmonic: SphericalHarmonics):
         # precomputation
         dist = child.multipoleCenter[0] - parent.multipoleCenter[0]
         harm = harmonic.ypsilon(dist)
-        mult = np.array(child.multipoleExpansion)
+        mult = child.multipoleExpansion
         expOrder = shape[0]
         # funtion to compute a single index
         # TODO: vectorization is hard... smh replace loops

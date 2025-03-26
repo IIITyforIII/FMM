@@ -57,7 +57,7 @@ def determineChildDomain(node:Node, idx: int) -> tuple:
 
     return new_min, new_max
 
-def splitNode(positions: Union[np.ndarray,jnp.ndarray], leafs: List, node: Node, nCrit: int, multiThreading):
+def splitNode(positions: np.ndarray, leafs: np.ndarray, node: Node, nCrit: int, multiThreading):
     ''' Splits a node into 8 childs, and distributes all particle ids it contains to its childs.'''
     node.children = [Node(*determineChildDomain(node,i)) for i in range(8)]
     buf = node.particleIds
@@ -68,7 +68,7 @@ def splitNode(positions: Union[np.ndarray,jnp.ndarray], leafs: List, node: Node,
     if multiThreading:
         del node.lock
 
-def determineOctantIdx(node: Node, pos: Union[np.ndarray, jnp.ndarray]) -> int:
+def determineOctantIdx(node: Node, pos: np.ndarray) -> int:
     '''Determine to which child a particle should be assigned.'''
     center = (node.domainMin + node.domainMax)/2 
 
@@ -78,7 +78,7 @@ def determineOctantIdx(node: Node, pos: Union[np.ndarray, jnp.ndarray]) -> int:
             octant_idx |= (1 << i)
     return octant_idx
 
-def insertParticle(positions: Union[np.ndarray, jnp.ndarray], leafs: List, partIdx: int, root:Node, nCrit: int, multiThreading: bool):
+def insertParticle(positions: np.ndarray, leafs: np.ndarray, partIdx: int, root:Node, nCrit: int, multiThreading: bool):
     '''Insert the particle positions[partIdx] into the given root node.'''
     node = root
     while(node.isLeaf == False):
@@ -94,7 +94,7 @@ def insertParticle(positions: Union[np.ndarray, jnp.ndarray], leafs: List, partI
         if node.lock:
             node.lock.release()
 
-def applyBoundaryCondition(domMin: Union[np.ndarray, jnp.ndarray], domMax: Union[np.ndarray, jnp.ndarray], positions: Union[np.ndarray,jnp.ndarray]):
+def applyBoundaryCondition(domMin: np.ndarray, domMax: np.ndarray, positions: np.ndarray):
     '''
     Aplly periodic boundary condition to a given domain. 
 
@@ -112,7 +112,7 @@ def applyBoundaryCondition(domMin: Union[np.ndarray, jnp.ndarray], domMax: Union
     positions += domMin
 
 
-def buildTree(positions: Union[np.ndarray,jnp.ndarray], leafs: List, domainMin: np.ndarray, domainMax: np.ndarray, nCrit: int = 32, nThreads: int = 4) -> Node:
+def buildTree(positions: np.ndarray, leafs: np.ndarray, domainMin: np.ndarray, domainMax: np.ndarray, nCrit: int = 32, nThreads: int = 4) -> Node:
     '''
     Build a oct-tree in a given domain.
 

@@ -1,7 +1,7 @@
 from jax.typing import ArrayLike
 from geolib.tree import applyBoundaryCondition
 from simlib.simulators import Simulator, nbodyDirectSimulator
-from physlib.densityModels import PlummerSphere
+from physlib.densityModels import PlummerSphere, UniformSphere
 from geolib.coordinates import Point3D 
 from utils.dataIO import writeToVtp
 from vtkmodules.vtkCommonCore import vtkPoints
@@ -155,7 +155,7 @@ if __name__ == '__main__':
     #TODO notes for later ---> DONT FORGET BOUNDARYCONDITION outside of simulator
     import time
     start = time.time()
-    pos,vel = createInitState(1000, core_rad=10)
+    pos,vel = createInitState(10000, core_rad=10)
     end = time.time()
     print('State prep:')
     print(end - start)
@@ -164,9 +164,14 @@ if __name__ == '__main__':
     mass = np.ones(len(pos))
     applyBoundaryCondition(dMin, dMax, pos)
 
+    # from physlib.densityModels import UniformBox
+    # pos = UniformBox([0,0,0], 100,100,100).sample(10000)
+    #TODO notes plummer sphere brauch länger. dichtere verteilung in der mitte, mehr m2m -> mehr dauer
+
     from simlib.simulators import fmmSimulator
     from geolib.expansionCentres import SmallesEnclosingSphere, GeometricCenter, CenterOfMass
-    test = fmmSimulator(pos,vel,dMin,dMax,mass,expansionOrder=3, nCrit=500, nThreads=1)
+    test = fmmSimulator(pos,vel,dMin,dMax,mass,expansionOrder=3, nCrit=600, nThreads=1)
+
 
     # directTest = nbodyDirectSimulator(pos,vel,mass)
     # start = time.time()
@@ -174,11 +179,3 @@ if __name__ == '__main__':
     # end = time.time()
     # print('direct sum step:')
     # print(end - start)
-
-    # root = buildTree(pos, leafs, mi, ma, 2, 0)
-    # for l in leafs:
-    #     print(pos[l.particleIds])
-
-    # root = buildTree(pos,mi, ma, nCrit=5, nThreads=1)
-    # for c in root.children:
-    #     print(pos[c.particleIds])
