@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Optional
 import numpy as np
+from scipy.special import factorial
 from geolib.tree import Node
 
 class AcceptanceCriterion(ABC):
@@ -25,8 +26,18 @@ class AdvancedAcceptanceCriterion(AcceptanceCriterion):
     def __init__(self, epsilon: float = 10**(-6.25)):
         self.eps = epsilon
 
-    def eval(self, A: Node, B:Node) -> bool:
-        angle = dist < 1        
+    def eval(self, A: Node, B:Node, a_f: Optional[np.ndarray]) -> bool:
         #TODO implement advanced criterion 
         return False
+
+    @staticmethod
+    def computeMultipolePower(node: Node):
+        '''Compute the multipole Power'''
+        expOrder = node.multipoleExpansion.shape[0]
+        res = np.zeros(expOrder).astype(complex)
+        for n in range(expOrder):
+            for m in range(-n+1, n):
+                res[n] = factorial(n-m) * factorial(n+m) * np.conjugate(node.multipoleExpansion[n,m]) * node.multipoleExpansion[n,m] 
+        return res
+
 

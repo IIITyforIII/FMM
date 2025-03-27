@@ -38,6 +38,7 @@ class Node():
         self.numParticles= 0
         self.particleIds = []
         self.multipoleExpansion = None
+        self.multipolePower = None
         self.domainMin = domMin
         self.domainMax = domMax
         self.children = []

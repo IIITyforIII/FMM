@@ -4,7 +4,7 @@ import numpy as np
 from jax.typing import ArrayLike
 from geolib.expansionCentres import CenterOfMass, SmallesEnclosingSphere
 from geolib.tree import buildTree, getMortonSortedPermutation, Node
-from simlib.acceptanceCriterion import AcceptanceCriterion, FixedAcceptanceCriterion
+from simlib.acceptanceCriterion import AcceptanceCriterion, AdvancedAcceptanceCriterion, FixedAcceptanceCriterion
 import simlib.kernels as kernels
 from jax import config
 from abc import ABC, abstractmethod
@@ -274,12 +274,17 @@ class fmmSimulator(Simulator):
             #update expansion centers
             root.potentialCenter = self.potentialExpandCenter.computeExpCenter(self.pos,root,self.masses)
             root.multipoleCenter = self.multipoleExpandCenter.computeExpCenter(self.pos,root,self.masses) if self.multipoleExpandCenter is not None else root.potentialCenter
-
+            
             #compute multipole
             if len(root.particleIds) > 0:
                 root.multipoleExpansion = kernels.p2m(self.pos, root.particleIds, root.multipoleCenter[0], self.masses, self.harmonics)
             else:
                 root.multipoleExpansion = 0 # pyright: ignore
+
+            # compute multipole Powers if needed for MAC
+            if isinstance(self.MAC, AdvancedAcceptanceCriterion):
+                root.multipolePower = self.MAC.computeMultipolePower(root)
+
         else:
             # traverse down the tree
             for c in root.children:
@@ -289,8 +294,12 @@ class fmmSimulator(Simulator):
             root.potentialCenter = self.potentialExpandCenter.computeExpCenter(self.pos,root,self.masses)
             root.multipoleCenter = self.multipoleExpandCenter.computeExpCenter(self.pos,root,self.masses) if self.multipoleExpandCenter is not None else root.potentialCenter
 
-
             # compute multipole
             root.multipoleExpansion = np.zeros(self.harmonics.n_arr.shape).astype(complex) # pyright: ignore
             for c in root.children:
                 root.multipoleExpansion += kernels.m2m(c, root, self.harmonics)
+
+            # compute multipole powers if needed for MAC
+            if isinstance(self.MAC, AdvancedAcceptanceCriterion):
+                root.multipolePower = self.MAC.computeMultipolePower(root)
+
