@@ -197,7 +197,6 @@ class fmmSimulator(Simulator):
         end =time.time()
         print('multipoles')
         print(end - start)
-        print(self.root.multipoleCenter)
 
         self.t = 0.
         # units

@@ -76,27 +76,27 @@ class CenterOfMass(ExpansionCenter):
             center = p.sum(axis=0)/m
             radius = np.max(np.linalg.norm(p-center, axis=1))
             # compared to smallest enclosing sphere also compute radius
-            return p.sum(axis=0)/m, m, radius 
+            return p.sum(axis=0)/m, radius, m 
         else:
             # runAvg = np.zeros(3)               
             # count  = 0
             cs = []
-            ms = []
             rs = []
+            ms = []
             if self.multipole:
                 for c in node.children:
                     if not (c.multipoleCenter[0] is None):
                         cs.append(c.multipoleCenter[0])
-                        ms.append(c.multipoleCenter[1])
-                        rs.append(c.multipoleCenter[2])
+                        rs.append(c.multipoleCenter[1])
+                        ms.append(c.multipoleCenter[2])
                         # runAvg += c.multipoleCenter[0] * c.multipoleCenter[1]
                         # count  += c.multipoleCenter[1]
             else:
                 for c in node.children:
                     if not (c.potentialCenter[0] is None):
                         cs.append(c.potentialCenter[0])
-                        ms.append(c.potentialCenter[1])
-                        rs.append(c.potentialCenter[2])
+                        rs.append(c.potentialCenter[1])
+                        ms.append(c.potentialCenter[2])
                         # runAvg += c.potentialCenter[0] * c.potentialCenter[1]
                         # count  += c.potentialCenter[1]
             if(len(cs) == 0): return None,None,None
@@ -108,4 +108,4 @@ class CenterOfMass(ExpansionCenter):
             c = c/m
             radius = np.max(rs + np.linalg.norm(c - cs,axis=1))
 
-            return c, m, radius
+            return c, radius, m
