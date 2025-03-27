@@ -196,6 +196,7 @@ def m2l(A: Node, B: Node, harmonic: SphericalHarmonics, accelerated: bool = Fals
                     res += np.conjugate(mult[k,l]) * harm[n_k,m_l]
         return res
     def computeFnmAccelerated(n,m):
+        # TODO: how to implement x and z swapping
         # compute rotation angles
         az = np.arctan(dist[1]/dist[0])
         ax = np.arctan(np.sqrt(dist[2]**2 + dist[1]**2)/dist[0]) 

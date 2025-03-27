@@ -198,9 +198,6 @@ class fmmSimulator(Simulator):
         print('multipoles')
         print(end - start)
         print(self.root.multipoleCenter)
-        # print(self.root.multipoleExpansion)
-        print(kernels.m2l(self.root.children[0], self.root.children[1], self.harmonics))
-        print(kernels.m2l(self.root.children[0], self.root.children[1], self.harmonics, accelerated=True))
 
         self.t = 0.
         # units

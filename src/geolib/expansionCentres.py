@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
 from ctypes import ArgumentError
 from typing import Optional
+
 from geolib.tree import Node
 import numpy as np
-import jax.numpy as jnp
 import miniball
 
 class ExpansionCenter(ABC):
@@ -68,24 +68,44 @@ class CenterOfMass(ExpansionCenter):
             raise ArgumentError('Computation of center of mass, requires the masses.')
         if node.isLeaf:
             if len(node.particleIds) == 0:
-                return None, None
+                return None, None, None
             p = positions[node.particleIds]
             m = masses[node.particleIds]
             p = p * m
             m = m.sum()
-            return p.sum(axis=0)/m, m
+            center = p.sum(axis=0)/m
+            radius = np.max(np.linalg.norm(p-center, axis=1))
+            # compared to smallest enclosing sphere also compute radius
+            return p.sum(axis=0)/m, m, radius 
         else:
-            runAvg = np.zeros(3)               
-            count  = 0
+            # runAvg = np.zeros(3)               
+            # count  = 0
+            cs = []
+            ms = []
+            rs = []
             if self.multipole:
                 for c in node.children:
                     if not (c.multipoleCenter[0] is None):
-                        runAvg += c.multipoleCenter[0] * c.multipoleCenter[1]
-                        count  += c.multipoleCenter[1]
+                        cs.append(c.multipoleCenter[0])
+                        ms.append(c.multipoleCenter[1])
+                        rs.append(c.multipoleCenter[2])
+                        # runAvg += c.multipoleCenter[0] * c.multipoleCenter[1]
+                        # count  += c.multipoleCenter[1]
             else:
                 for c in node.children:
                     if not (c.potentialCenter[0] is None):
-                        runAvg += c.potentialCenter[0] * c.potentialCenter[1]
-                        count  += c.potentialCenter[1]
-            return runAvg/count, count
-    
+                        cs.append(c.potentialCenter[0])
+                        ms.append(c.potentialCenter[1])
+                        rs.append(c.potentialCenter[2])
+                        # runAvg += c.potentialCenter[0] * c.potentialCenter[1]
+                        # count  += c.potentialCenter[1]
+            if(len(cs) == 0): return None,None,None
+            cs = np.array(cs)
+            rs = np.array(rs)
+            ms = np.array(ms).reshape(-1,1)
+            c = np.sum(cs*ms, axis=0)            
+            m = np.sum(ms)
+            c = c/m
+            radius = np.max(rs + np.linalg.norm(c - cs,axis=1))
+
+            return c, m, radius

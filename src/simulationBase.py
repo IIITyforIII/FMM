@@ -132,7 +132,7 @@ if __name__ == '__main__':
     # sim params
     total_time = 50   
     time_step  = 0.01 
-    path = '../data/testSim'
+    path = 'data/testSim'
 
     sim = False
 
@@ -170,7 +170,7 @@ if __name__ == '__main__':
 
     from simlib.simulators import fmmSimulator
     from geolib.expansionCentres import SmallesEnclosingSphere, GeometricCenter, CenterOfMass
-    test = fmmSimulator(pos,vel,dMin,dMax,mass,expansionOrder=3, nCrit=128, nThreads=1)
+    test = fmmSimulator(pos,vel,dMin,dMax,mass,expansionOrder=3, nCrit=32, nThreads=1)
 
 
     # directTest = nbodyDirectSimulator(pos,vel,mass)
