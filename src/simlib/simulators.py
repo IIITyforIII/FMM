@@ -197,7 +197,7 @@ class fmmSimulator(Simulator):
         start = time.time()
         self.computeCentersAndMultipoles(self.root)
         end =time.time()
-        print('multipoles')
+        print('multipole step')
         print(end - start)
 
         self.t = 0.

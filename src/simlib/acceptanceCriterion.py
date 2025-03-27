@@ -32,12 +32,12 @@ class AdvancedAcceptanceCriterion(AcceptanceCriterion):
 
     @staticmethod
     def computeMultipolePower(node: Node):
-        '''Compute the multipole Power'''
+        '''Compute the multipole Power (it is already squared).'''
         expOrder = node.multipoleExpansion.shape[0]
-        res = np.zeros(expOrder).astype(complex)
-        for n in range(expOrder):
-            for m in range(-n+1, n):
-                res[n] = factorial(n-m) * factorial(n+m) * np.conjugate(node.multipoleExpansion[n,m]) * node.multipoleExpansion[n,m] 
+        res = np.zeros(expOrder)
+        for n in np.arange(expOrder):
+            for m in range(-n, n+1):
+                res[n] = np.sqrt(factorial(n-m) * factorial(n+m)) * np.abs(node.multipoleExpansion[n,m])
         return res
 
 
