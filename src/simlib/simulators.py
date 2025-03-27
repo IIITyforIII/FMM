@@ -4,6 +4,7 @@ import numpy as np
 from jax.typing import ArrayLike
 from geolib.expansionCentres import CenterOfMass, SmallesEnclosingSphere
 from geolib.tree import buildTree, getMortonSortedPermutation, Node
+from simlib.acceptanceCriterion import AcceptanceCriterion, FixedAcceptanceCriterion
 import simlib.kernels as kernels
 from jax import config
 from abc import ABC, abstractmethod
@@ -155,7 +156,7 @@ class fmmSimulator(Simulator):
     Simulator for a n-body particle simulation using fast multipole method.
     Excpects natural units (G=1) in default, else use setG(). Calculations are performed unit agnostic.
     '''
-    def __init__(self, initPos: ArrayLike, initVel: ArrayLike, domainMin, domainMax, masses: ArrayLike, expansionOrder: int, nCrit: int = 32, nThreads: int = 1) -> None:
+    def __init__(self, initPos: ArrayLike, initVel: ArrayLike, domainMin, domainMax, masses: ArrayLike, expansionOrder: int, nCrit: int = 32, acceptCrit: AcceptanceCriterion = FixedAcceptanceCriterion(), nThreads: int = 1) -> None:
         '''
         Parameters
         ----------
@@ -178,6 +179,7 @@ class fmmSimulator(Simulator):
         self.leafs = np.array([None] * len(self.pos)) # leafs[idx] corresponds to the leaf node of particle idx -> use for misfit calc
         self.multipoleExpandCenter = None if expansionOrder >= 8 else CenterOfMass(multipole=True) # defines computation method of multipole expansion center
         self.potentialExpandCenter = SmallesEnclosingSphere(multipole=False) # defines computation method of potential/force expansion center
+        self.MAC = acceptCrit
 
         # tree
         perm = getMortonSortedPermutation(self.pos)  # morton sort the positions for spatial correlation especially for multithreading

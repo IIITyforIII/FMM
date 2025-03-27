@@ -9,17 +9,17 @@ class AcceptanceCriterion(ABC):
         '''Evaluate the Multipole Acceptance criterion for potential in B due to A.'''
         pass
 
-class FixedSESAcceptanceCriterion():
+class FixedAcceptanceCriterion(AcceptanceCriterion):
     '''Test if the acceptance criterian for a fixed opening angle is met.'''
 
     def __init__(self, angle: float = 1.) -> None:
         self.openAngle = angle
 
-    def eval(self, A: Node, B: Node) -> bool:
-        return (A.multipoleCenter[1] + B.potentialCenter[1])/np.norm(B.potentialCenter[0] - A.multipoleCenter[0]) < self.openAngle
+    def eval(self, A: Node, B: Node, a_f: Optional[np.ndarray] = None) -> bool:
+        return (A.multipoleCenter[1] + B.potentialCenter[1])/np.linalg.norm(B.potentialCenter[0] - A.multipoleCenter[0]) < self.openAngle
 
 
-class AdvancedAcceptanceCriterion():
+class AdvancedAcceptanceCriterion(AcceptanceCriterion):
     '''Test for the advanced acceptance criterion for aiming to obtain errors < a given relative force error epsilon.'''
 
     def __init__(self, epsilon: float = 10**(-6.25)):
