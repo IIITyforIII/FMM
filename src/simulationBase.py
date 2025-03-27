@@ -170,7 +170,7 @@ if __name__ == '__main__':
 
     from simlib.simulators import fmmSimulator
     from geolib.expansionCentres import SmallesEnclosingSphere, GeometricCenter, CenterOfMass
-    test = fmmSimulator(pos,vel,dMin,dMax,mass,expansionOrder=3, nCrit=600, nThreads=1)
+    test = fmmSimulator(pos,vel,dMin,dMax,mass,expansionOrder=3, nCrit=128, nThreads=1)
 
 
     # directTest = nbodyDirectSimulator(pos,vel,mass)

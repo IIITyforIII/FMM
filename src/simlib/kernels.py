@@ -95,11 +95,23 @@ class SphericalHarmonics():
         self.m_arr = np.tile(self.m_arr, (n+1,1))
         self.n_arr = np.tile(range(n+1), (2*m + 1,1)).transpose()
 
-    @staticmethod
-    def theta(particle: np.ndarray):
+    def theta(self, pos: np.ndarray):
         '''Perform θ(r) on a given particel.'''
-        #TODO
-        pass
+        #polar coordinates
+        pol = mapCartToPolar(pos)
+
+        #normalization
+        r_n1 = pol[0]**(self.n_arr + 1)
+        norm = factorial(self.n_arr - self.m_arr)
+        norm = np.divide(norm, r_n1, where=r_n1!=0, out=np.zeros_like(norm))
+
+        #legendre polynomials
+        legendre = assoc_legendre_p_all(self.n,self.m,np.cos(pol[1]))[0]
+
+        #azimuthal term
+        azim = np.exp(1j * self.m_arr * pol[2])        
+
+        return self.condonPhase * norm * legendre * azim
 
     def ypsilon(self, pos: np.ndarray):
         '''Perform Υ(r) on a given position.'''
@@ -142,20 +154,98 @@ def m2m(child: Node, parent: Node, harmonic: SphericalHarmonics):
         # TODO: vectorization is hard... smh replace loops
         def computeMnm(n, m):
             res = 0.
-            for k in jnp.arange(n+1):
-                for l in jnp.arange(-k, k+1):
+            for k in np.arange(n+1):
+                for l in np.arange(-k, k+1):
                     n_k = n - k
                     m_l = m - l
                     # filter out orders out of bounds
-                    if jnp.abs(m_l) <= m_l:
+                    if np.abs(m_l) <= n_k:
                         res += harm[k,l] * mult[n_k,m_l]
             return res
 
         # compute multipole
-        m_ids = np.hstack((np.arange(expOrder), np.arange(-1* expOrder + 1, 0)))
+        # m_ids = np.hstack((np.arange(expOrder), np.arange(-1* expOrder + 1, 0)))
+        m_ids = np.arange(-expOrder+1, expOrder)
         n_ids = np.arange(expOrder)
         for n in n_ids:
             for m in m_ids:
                 res[n,m] = computeMnm(n,m)
+
+    return res
+
+def m2l(A: Node, B: Node, harmonic: SphericalHarmonics, accelerated: bool = False):
+    '''Computes the field tensor at B due to A.'''
+    shape = harmonic.n_arr.shape
+    res = np.zeros(shape).astype(complex)
+
+    # precomputation
+    dist = B.potentialCenter[0] - A.multipoleCenter[0]
+    harm = harmonic.theta(dist)
+    mult = A.multipoleExpansion
+    expOrder = shape[0]
+    # funtion to compute a single index
+    # TODO: vectorization is hard... smh replace loops
+    def computeFnm(n, m):
+        res = 0.
+        for k in np.arange(expOrder-n):
+            for l in np.arange(-k, k+1):
+                n_k = n + k
+                m_l = m + l
+                # filter out orders out of bounds
+                if np.abs(m_l) <= n_k:
+                    res += np.conjugate(mult[k,l]) * harm[n_k,m_l]
+        return res
+    def computeFnmAccelerated(n,m):
+        # compute rotation angles
+        az = np.arctan(dist[1]/dist[0])
+        ax = np.arctan(np.sqrt(dist[2]**2 + dist[1]**2)/dist[0]) 
+
+        # perform multipole computation
+        res = 0.
+        for k in np.arange(np.abs(m), expOrder-n):
+            res += (-1.)**m * np.exp(-1j * m * ax) * np.exp(-1j*m*az) * mult[k,m] * (factorial(n+k)/np.linalg.norm(dist)**(n+k+1))
+        return np.exp(1j*m*az) * np.exp(1j*m*ax) * res
+ 
+
+    # compute fieldtensor 
+    # m_ids = np.hstack((np.arange(expOrder), np.arange(-1* expOrder + 1, 0)))
+    m_ids = np.arange(-expOrder+1, expOrder)
+    n_ids = np.arange(expOrder)
+    for n in n_ids:
+        for m in m_ids:
+            res[n,m] = computeFnm(n,m) if not accelerated else computeFnmAccelerated(n,m)
+
+    return res
+
+def l2l(child: Node, potentialCenter, fieldtensor, harmonic:SphericalHarmonics):
+    '''Compute the fieldtensor w.r.t. another expansion center. Passes fieldtensor down to child.'''
+    shape = harmonic.n_arr.shape
+    res = np.zeros(shape).astype(complex)
+
+    # precomputation
+    dist = potentialCenter[0] - child.potentialCenter[0]
+    harm = harmonic.ypsilon(dist)
+    field= fieldtensor
+    expOrder = shape[0]
+    # funtion to compute a single index
+    # TODO: vectorization is hard... smh replace loops
+    def computeFnm(n, m):
+        res = 0.
+        for k in np.arange(expOrder-n):
+            for l in np.arange(-k, k+1):
+                n_k = n + k
+                m_l = m + l
+                # filter out orders out of bounds
+                if np.abs(m_l) <= n_k:
+                    res += np.conjugate(harm[k,l]) * field[n_k,m_l]
+        return res
+
+    # compute fieldtensor
+    # m_ids = np.hstack((np.arange(expOrder), np.arange(-1* expOrder + 1, 0)))
+    m_ids = np.arange(-expOrder+1, expOrder)
+    n_ids = np.arange(expOrder)
+    for n in n_ids:
+        for m in m_ids:
+            res[n,m] = computeFnm(n,m)
 
     return res
