@@ -1,5 +1,13 @@
+from abc import ABC, abstractmethod
+from typing import Optional
+import numpy as np
 from geolib.tree import Node
 
+class AcceptanceCriterion(ABC):
+    @abstractmethod
+    def eval(self, A: Node, B:Node, a_f: Optional[np.ndarray]) -> bool:
+        '''Evaluate the Multipole Acceptance criterion for potential in B due to A.'''
+        pass
 
 class FixedSESAcceptanceCriterion():
     '''Test if the acceptance criterian for a fixed opening angle is met.'''
@@ -8,7 +16,7 @@ class FixedSESAcceptanceCriterion():
         self.openAngle = angle
 
     def eval(self, A: Node, B: Node) -> bool:
-        return (A.potentialCenter[1] + B.potentialCenter[1])/np.norm(A.multipoleCenter[0]-B.potentialCenter[0]) < self.openAngle
+        return (A.multipoleCenter[1] + B.potentialCenter[1])/np.norm(B.potentialCenter[0] - A.multipoleCenter[0]) < self.openAngle
 
 
 class AdvancedAcceptanceCriterion():

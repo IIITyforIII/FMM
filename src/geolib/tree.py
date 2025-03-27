@@ -35,6 +35,7 @@ class Node():
     '''Class representing a node of the oct-tree.'''
     def __init__(self, domMin: np.ndarray, domMax: np.ndarray, multiThreading: bool = False) -> None:
         self.isLeaf = True
+        self.numParticles= 0
         self.particleIds = []
         self.multipoleExpansion = None
         self.domainMin = domMin
@@ -61,6 +62,7 @@ def splitNode(positions: np.ndarray, leafs: np.ndarray, node: Node, nCrit: int, 
     ''' Splits a node into 8 childs, and distributes all particle ids it contains to its childs.'''
     node.children = [Node(*determineChildDomain(node,i)) for i in range(8)]
     buf = node.particleIds
+    node.numParticles = 0
     node.particleIds = []
     node.isLeaf = False
     for idx in buf:
@@ -81,6 +83,7 @@ def determineOctantIdx(node: Node, pos: np.ndarray) -> int:
 def insertParticle(positions: np.ndarray, leafs: np.ndarray, partIdx: int, root:Node, nCrit: int, multiThreading: bool):
     '''Insert the particle positions[partIdx] into the given root node.'''
     node = root
+    node.numParticles += 1
     while(node.isLeaf == False):
         idx = determineOctantIdx(node, positions[partIdx])
         node = node.children[idx]
