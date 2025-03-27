@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Optional
 import numpy as np
-from scipy.special import factorial
+from scipy.special import binom, factorial
 from geolib.tree import Node
 
 class AcceptanceCriterion(ABC):
@@ -27,8 +27,24 @@ class AdvancedAcceptanceCriterion(AcceptanceCriterion):
         self.eps = epsilon
 
     def eval(self, A: Node, B:Node, a_f: Optional[np.ndarray]) -> bool:
-        #TODO implement advanced criterion 
-        return False
+        dist = np.linalg.norm(B.potentialCenter[0] - A.multipoleCenter[0])
+        # compute opening angle
+        a = (A.multipoleCenter[1] + B.potentialCenter[1])/dist
+
+        # compute relative error term
+        e = self.errorBound(A,B,dist)
+        e = 8*np.max((A.multipoleCenter[1], B.potentialCenter[1]))/(A.multipoleCenter[1] + B.potentialCenter[1]) * e
+        e = e * A.multipoleCenter[2]/dist**2
+        return a < 1 and e < self.eps*np.min(a_f[B.particleIds])
+
+    def errorBound(self, A:Node, B:Node, dist:float):
+        order = A.multipoleExpansion.shape[0]
+        res = 0.
+        for k in np.arange(order):
+            res += binom(order-1, k) * A.multipolePower[k] * np.power(B.potentialCenter[1], order-1-k) / np.power(dist,order-1)
+        return res/A.multipoleCenter[2]
+
+        
 
     @staticmethod
     def computeMultipolePower(node: Node):

@@ -289,6 +289,9 @@ class fmmSimulator(Simulator):
             # traverse down the tree
             for c in root.children:
                 self.computeCentersAndMultipoles(c)
+                # propagate particle id information up the tree
+                root.particleIds += c.particleIds
+
 
             # update expansion center
             root.potentialCenter = self.potentialExpandCenter.computeExpCenter(self.pos,root,self.masses)
