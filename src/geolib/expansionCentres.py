@@ -8,7 +8,7 @@ import miniball
 
 class ExpansionCenter(ABC):
     @abstractmethod
-    def computeExpCenter(self, positions: np.ndarray, node: Node, masses: Optional[np.ndarray] = None) -> tuple:
+    def computeExpCenter(self, positions: np.ndarray, node: Node, masses: np.ndarray) -> tuple:
         pass
 
 class GeometricCenter(ExpansionCenter):
@@ -22,7 +22,7 @@ class SmallesEnclosingSphere(ExpansionCenter):
     def __init__(self, multipole: bool) -> None:
         self.multipole = multipole
     
-    def computeExpCenter(self, positions: np.ndarray, node: Node, masses: Optional[np.ndarray] = None) -> tuple:
+    def computeExpCenter(self, positions: np.ndarray, node: Node, masses: np.ndarray) -> tuple:
         if node.isLeaf: 
             if len(node.particleIds)== 0:
                 return None, None
@@ -31,7 +31,7 @@ class SmallesEnclosingSphere(ExpansionCenter):
                 center, radius = miniball.get_bounding_ball(parts)
             else:
                 center, radius = parts[0], 0
-            return center, np.sqrt(radius)            
+            return center, np.sqrt(radius), np.sum(masses[node.particleIds])            
         else:
             if self.multipole:
                 merged = node.children[0].multipoleCenter
@@ -56,14 +56,14 @@ class SmallesEnclosingSphere(ExpansionCenter):
         direc = (other[0] - first[0]) / dist if dist != 0 else np.zeros_like(first[0])
         new_center = first[0] + direc * (new_r - first[1])
 
-        return new_center, new_r
+        return new_center, new_r, first[2]+other[2]
 
 class CenterOfMass(ExpansionCenter):
     '''Class computing a expansion center as the center of mass.'''
     def __init__(self, multipole: bool) -> None:
         self.multipole = multipole
 
-    def computeExpCenter(self, positions: np.ndarray, node: Node, masses: Optional[np.ndarray] = None) -> tuple: 
+    def computeExpCenter(self, positions: np.ndarray, node: Node, masses: np.ndarray) -> tuple: 
         if masses is None:
             raise ArgumentError('Computation of center of mass, requires the masses.')
         if node.isLeaf:

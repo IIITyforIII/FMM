@@ -42,8 +42,8 @@ class Node():
         self.domainMin = domMin
         self.domainMax = domMax
         self.children = []
-        self.multipoleCenter = (None, None)
-        self.potentialCenter = (None, None)
+        self.multipoleCenter = (None, None, None)
+        self.potentialCenter = (None, None, None)
 
         #threading
         if multiThreading:
