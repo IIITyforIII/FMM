@@ -123,7 +123,7 @@ class nbodyDirectSimulator(Simulator):
     def step(self, dt: float = 0.1):
         '''{}'''.format(Simulator.step.__doc__)
         # calculate resulting accelerations using P2P kernel.
-        acc = kernels.p2p.acceleration(self.pos, self.pos, self.G, self.masses, use_jax=True)
+        acc = kernels.p2p.acceleration(self.pos, self.pos, self.masses, self.G, use_jax=True)
         
         # integrate motion formula and update positions
         self.vel = self.vel + dt * acc 
@@ -172,6 +172,7 @@ class fmmSimulator(Simulator):
         self.num_particles = len(self.pos)
         self.vel = np.array(initVel, dtype =np.float64).reshape(-1,3)
         self.masses = np.array(masses, dtype=np.float64).reshape(-1,1)
+        self.acc = np.zeros_like(self.pos)
 
         # fmm related data
         self.expansionOrder = expansionOrder
@@ -199,7 +200,6 @@ class fmmSimulator(Simulator):
         end =time.time()
         print('multipole step')
         print(end - start)
-        print(self.root.multipoleExpansion)
 
         self.t = 0.
         # units
@@ -307,3 +307,19 @@ class fmmSimulator(Simulator):
             if isinstance(self.MAC, AdvancedAcceptanceCriterion):
                 root.multipolePower = self.MAC.computeMultipolePower(root)
 
+    def approximate(self, A:Node, B:Node, mutual:bool = True):
+        '''Compute the approximate potentials between A and B.'''
+        if len(A.particleIds) < self.expansionOrder**2:
+            pass
+
+    def dualTreeWalk(self, A:Node, B:Node, mutual:bool = True):
+        # test if direct summation is faster (Cell -> Cell)
+        ids = np.hstack((A.particleIds,B.particleIds))
+        if len(ids) < self.expansionOrder**3:
+            self.acc[ids] += kernels.p2p.acceleration(self.pos[ids], self.pos[ids], self.masses[ids], G=self.G, use_jax=False)
+            return 
+
+        if self.MAC.eval(A,B, self.acc):
+            # do approximation using multipoleExpansion
+            self.approximate(A,B,mutual)
+            
