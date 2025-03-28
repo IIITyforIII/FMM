@@ -1,0 +1,4 @@
+- can sim be deleted?
+- can oct_tree be deleted?
+- can main.py be deleted?
+- 

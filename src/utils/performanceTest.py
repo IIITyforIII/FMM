@@ -1,4 +1,7 @@
 import numpy as np
+import os
+import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from simlib.simulators import Simulator, nbodyDirectSimulator, fmmSimulator
 from physlib.densityModels import PlummerSphere, UniformSphere
@@ -6,7 +9,6 @@ from timeit import default_timer as timer
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 import simulationBase
-
 
 
 def get_avg_times_for_number_of_particles(domain_min, domain_max, expansion_order:int, min_num_particles:int,
