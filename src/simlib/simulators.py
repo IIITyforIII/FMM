@@ -2,7 +2,7 @@ from typing import Tuple
 import jax.numpy as jnp
 import numpy as np
 from jax.typing import ArrayLike
-from geolib.expansionCentres import CenterOfMass, SmallesEnclosingSphere
+from geolib.expansionCentres import CenterOfMass, SmallestEnclosingSphere
 from geolib.tree import buildTree, getMortonSortedPermutation, Node
 from simlib.acceptanceCriterion import AcceptanceCriterion, AdvancedAcceptanceCriterion, FixedAcceptanceCriterion
 import simlib.kernels as kernels
@@ -178,7 +178,7 @@ class fmmSimulator(Simulator):
         self.harmonics = kernels.SphericalHarmonics(self.expansionOrder, self.expansionOrder)
         self.leafs = np.array([None] * len(self.pos)) # leafs[idx] corresponds to the leaf node of particle idx -> use for misfit calc
         self.multipoleExpandCenter = None if expansionOrder >= 8 else CenterOfMass(multipole=True) # defines computation method of multipole expansion center
-        self.potentialExpandCenter = SmallesEnclosingSphere(multipole=False) # defines computation method of potential/force expansion center
+        self.potentialExpandCenter = SmallestEnclosingSphere(multipole=False) # defines computation method of potential/force expansion center
         self.MAC = acceptCrit
 
         # tree
@@ -199,6 +199,7 @@ class fmmSimulator(Simulator):
         end =time.time()
         print('multipole step')
         print(end - start)
+        print(self.root.multipoleExpansion)
 
         self.t = 0.
         # units

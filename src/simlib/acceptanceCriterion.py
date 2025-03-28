@@ -48,7 +48,9 @@ class AdvancedAcceptanceCriterion(AcceptanceCriterion):
 
     @staticmethod
     def computeMultipolePower(node: Node):
-        '''Compute the multipole Power (it is already squared).'''
+        '''Compute the multipole Power (it is already the square root).'''
+        if len(node.particleIds) == 0:
+            return 0
         expOrder = node.multipoleExpansion.shape[0]
         res = np.zeros(expOrder)
         for n in np.arange(expOrder):

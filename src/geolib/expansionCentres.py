@@ -17,7 +17,7 @@ class GeometricCenter(ExpansionCenter):
     def computeExpCenter(self, positions: np.ndarray, node: Node, masses: Optional[np.ndarray] = None) -> tuple:
         return (node.domainMin + node.domainMax)/2 , 0
 
-class SmallesEnclosingSphere(ExpansionCenter):
+class SmallestEnclosingSphere(ExpansionCenter):
     '''Class computing an expansion center as the smalles enclosing sphere.'''
     def __init__(self, multipole: bool) -> None:
         self.multipole = multipole

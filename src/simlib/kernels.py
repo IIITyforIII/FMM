@@ -250,3 +250,38 @@ def l2l(child: Node, potentialCenter, fieldtensor, harmonic:SphericalHarmonics):
             res[n,m] = computeFnm(n,m)
 
     return res
+
+def l2p(leaf: Node, sink: np.ndarray, fieldtensor, harmonic:SphericalHarmonics):
+    '''Computes the the potential field at sinkposition, due to all other cells''' 
+    expOrder = harmonic.n_arr.shape[0] 
+    #check if p was set to 0 , else max order 1 is needed 
+    expOrder = expOrder if expOrder <= 1  else 2
+    # no negative orders needed for acceleration
+    res = np.zeros((expOrder,expOrder)).astype(complex)
+
+    # precomputation
+    dist = leaf.potentialCenter[0] - sink
+    harm = harmonic.ypsilon(dist)
+    field= fieldtensor
+    # funtion to compute a single index
+    # TODO: vectorization is hard... smh replace loops
+    def computePsi(n, m):
+        res = 0.
+        for k in np.arange(expOrder-n):
+            for l in np.arange(-k, k+1):
+                n_k = n + k
+                m_l = m + l
+                # filter out orders out of bounds
+                if np.abs(m_l) <= n_k:
+                    res += np.conjugate(harm[k,l]) * field[n_k,m_l]
+        return res
+
+    # compute fieldtensor
+    # m_ids = np.hstack((np.arange(expOrder), np.arange(-1* expOrder + 1, 0)))
+    m_ids = np.arange(-expOrder+1, expOrder)
+    n_ids = np.arange(expOrder)
+    for n in n_ids:
+        for m in m_ids:
+            res[n,m] = computePsi(n,m)
+
+    return res
