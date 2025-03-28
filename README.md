@@ -2,6 +2,11 @@
 
 This repository contains an implementation of the Fast Multipole Method (FMM) as described [here](https://comp-astrophys-cosmol.springeropen.com/articles/10.1186/s40668-014-0001-7). The code is designed for high-performance collisional N-body simulations in astrophysics, where efficient computation of gravitational forces is critical. It leverages multipole expansions and spherical harmonics to accurately and efficiently approximate gravitational interactions.
 
+
+# ToDo:
+delete:
+- can fmm, main.py, oct_tree, sim
+
 ## Reproduction
 1. **Prerequisites:**
 ```bash
@@ -21,12 +26,20 @@ pip install -r requirements.txt #...
 3. Time Series Animation
 
 ## Modules
-### geolib
+
+### geolib (`src/geolib`)
 - Tree implementation based on [here](https://ieeexplore.ieee.org/document/6495868)
-### fmm
-- kernels.py
-### simlib
-- available simulators
+- cell.py Cell class
+- tree.py ()
+- 
+### physlib (`src/physlib`)
+- densityModels.py (density model classes (UniformBox, UniformSphere, and PlummerSphere) for sampling particle positions, velocities)
+
+### simlib (`src/simlib`)
+- kernels.py ( functions for particle interactions (P2P with its gradients, jerks, and snaps) and multipole translations using spherical harmonics (p2m, m2m, m2l, and l2l).)
+- simulators.py
+- acceptanceCriterion.py
+- 
 ### utils
 - performancetest
 - visualization.py
@@ -64,8 +77,9 @@ pip install -r requirements.txt #...
 │       ├── heatmap.py
 │       ├── performanceTest.py
 │       └── visualization.py
-├── traceData
+├── traceData # Contains all the traceData
 │   └── trace1.npy
+│   └── ...
 └── uv.lock
 ├── README.md
 ├── data
