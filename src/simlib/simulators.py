@@ -123,7 +123,7 @@ class nbodyDirectSimulator(Simulator):
     def step(self, dt: float = 0.1):
         '''{}'''.format(Simulator.step.__doc__)
         # calculate resulting accelerations using P2P kernel.
-        acc = kernels.p2p.acceleration(self.pos, self.pos, self.G, self.masses)
+        acc = kernels.p2p.acceleration(self.pos, self.pos, self.G, self.masses, use_jax=True)
         
         # integrate motion formula and update positions
         self.vel = self.vel + dt * acc 

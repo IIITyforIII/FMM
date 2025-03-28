@@ -14,43 +14,45 @@ class p2p():
     '''Particle-to-Particle (P2P) kernel.'''
 
     @staticmethod
-    def apply(sink: jnp.ndarray, source: jnp.ndarray, G: float = 1, M: Union[jnp.ndarray, float] = jnp.array([1])) -> jnp.ndarray:
+    def apply(sink: Union[np.ndarray,jnp.ndarray], source: Union[np.ndarray,jnp.ndarray], G: float = 1, M: Union[np.ndarray, jnp.ndarray, float] = 1., use_jax: bool = False) -> jnp.ndarray:
         '''
         Calculate the (negative) potentials of sinks using pairwise Particle-to-Particle interactions to sources.
         '''
+        mod = jnp if use_jax==True else np
         a1, a2 = sink.reshape(-1,1,3), source.reshape(1,-1,3)
-        r = jnp.linalg.norm(a1 - a2, axis=-1)
-        greens_func = lambda r: jnp.where(r==0, 0, 1/r)
+        r = mod.linalg.norm(a1 - a2, axis=-1)
+        greens_func = lambda r: jnp.where(r==0, 0, 1/r) if use_jax else np.divide(1, r, where=r!=0, out=np.zeros_like(r))
         pot = greens_func(r)
-        masses = jnp.array(M, dtype=float).reshape(1, -1)
-        return G*jnp.sum(masses * pot, axis=-1) # pyright: ignore
+        masses = mod.array(M, dtype=float).reshape(1, -1)
+        return G*mod.sum(masses * pot, axis=-1) # pyright: ignore
     potential = apply
 
     @staticmethod
-    def grad(sink: jnp.ndarray, source: jnp.ndarray, G: float = 1, M: Union[jnp.ndarray, float]= jnp.array([1])) -> jnp.ndarray:
+    def grad(sink: Union[np.ndarray,jnp.ndarray], source: Union[np.ndarray,jnp.ndarray], G: float = 1, M: Union[np.ndarray,jnp.ndarray,float]= 1., use_jax:bool = False) -> jnp.ndarray:
         '''
         Calculate accelerations (gradient of (negative) potential) using pairwise Particle-to-Particle interactions.
         '''
+        mod = jnp if use_jax==True else np
         a1, a2 = sink.reshape(-1,1,3), source.reshape(1,-1,3)
         r = a1-a2
-        r_norm= jnp.linalg.norm(r, axis=-1)
-        greens_grad = lambda r: jnp.where(r==0, 0, 1/r**3)
+        r_norm= mod.linalg.norm(r, axis=-1)
+        greens_grad = lambda r: jnp.where(r==0, 0, 1/r**3) if use_jax else np.divide(1, r**3, where=r!=0, out=np.zeros_like(r))
         acc = greens_grad(r_norm)
-        masses = jnp.array(M, dtype=float).reshape(1, -1)
+        masses = mod.array(M, dtype=float).reshape(1, -1)
         acc = masses * acc
-        acc = acc[:,:,jnp.newaxis] * r       # pyright: ignore
-        return -1*G*jnp.sum(acc, axis=1)   # pyright: ignore
+        acc = acc[:,:,mod.newaxis] * r       # pyright: ignore
+        return -1*G*mod.sum(acc, axis=1)   # pyright: ignore
     acceleration = grad
 
     @staticmethod
-    def jacobian(sink: jnp.ndarray, source:jnp.ndarray, G: float = 1, M: Union[jnp.ndarray, float] = jnp.array([1])) -> jnp.ndarray:
+    def jacobian(sink: jnp.ndarray, source:jnp.ndarray, G: float = 1, M: Union[jnp.ndarray, float] = jnp.array([1.])) -> jnp.ndarray:
         ''' Calculate the jacobian (∇(∇ϕ)) for all sinks using pairwise P2P kernel'''
         sink = sink.reshape(-1, 3)
-        g = jacfwd(lambda x: p2p.grad(x, source, G, M)[0])
+        g = jacfwd(lambda x: p2p.grad(x, source, G, M, use_jax=True)[0])
         return jnp.apply_along_axis(g, 1, sink) 
 
     @staticmethod
-    def jerk(sink: jnp.ndarray, sink_velocity: jnp.ndarray, source: jnp.ndarray, G: float = 1, M: Union[jnp.ndarray,float] = jnp.array([1])) -> jnp.ndarray:
+    def jerk(sink: jnp.ndarray, sink_velocity: jnp.ndarray, source: jnp.ndarray, G: float = 1, M: Union[jnp.ndarray,float] = jnp.array([1.])) -> jnp.ndarray:
         '''
         Caculate jerk using pairwise P2P kernel.
         jerk = d(∇ϕ)/dr * dr/dt = Jv = da/dt
