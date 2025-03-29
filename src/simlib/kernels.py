@@ -220,7 +220,7 @@ def m2l(A: Node, B: Node, harmonic: SphericalHarmonics, accelerated: bool = Fals
 
     return res
 
-def l2l(child: Node, parent: Node, harmonic:SphericalHarmonics):
+def l2l(parent: Node, child: Node, harmonic:SphericalHarmonics):
     '''Compute the fieldtensor w.r.t. another expansion center. Passes fieldtensor down to child.'''
     shape = harmonic.n_arr.shape
     res = np.zeros(shape).astype(complex)

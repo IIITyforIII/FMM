@@ -178,12 +178,12 @@ class fmmSimulator(Simulator):
         # fmm related data
         self.expansionOrder = expansionOrder
         self.harmonics = kernels.SphericalHarmonics(self.expansionOrder, self.expansionOrder)
-        self.leafs = np.array([None] * len(self.pos)) # leafs[idx] corresponds to the leaf node of particle idx -> use for misfit calc
         self.multipoleExpandCenter = None if expansionOrder >= 8 else CenterOfMass(multipole=True) # defines computation method of multipole expansion center
         self.potentialExpandCenter = SmallestEnclosingSphere(multipole=False) # defines computation method of potential/force expansion center
         self.MAC = acceptCrit
 
         # tree
+        self.leafs = np.array([None] * len(self.pos)) # leafs[idx] corresponds to the leaf node of particle idx -> use for misfit calc
         perm = getMortonSortedPermutation(self.pos)  # morton sort the positions for spatial correlation especially for multithreading
         self.pos = self.pos[perm]
         import time
@@ -277,17 +277,16 @@ class fmmSimulator(Simulator):
             root.potentialCenter = self.potentialExpandCenter.computeExpCenter(self.pos,root,self.masses)
             root.multipoleCenter = self.multipoleExpandCenter.computeExpCenter(self.pos,root,self.masses) if self.multipoleExpandCenter is not None else root.potentialCenter
             
-            #compute multipole
+            #compute multipole and init field tensor
             if len(root.particleIds) > 0:
                 root.multipoleExpansion = kernels.p2m(self.pos, root.particleIds, root.multipoleCenter[0], self.masses, self.harmonics)
-            else:
-                root.multipoleExpansion = 0 # pyright: ignore
-            # set field tensor to 0
-            root.fieldTensor = np.zeros_like(root.multipoleExpansion)
+                root.fieldTensor = np.zeros_like(self.harmonics.n_arr)
 
-            # compute multipole Powers if needed for MAC
-            if isinstance(self.MAC, AdvancedAcceptanceCriterion):
-                root.multipolePower = self.MAC.computeMultipolePower(root)
+                # compute multipole Powers if needed for MAC
+                if isinstance(self.MAC, AdvancedAcceptanceCriterion):
+                    root.multipolePower = self.MAC.computeMultipolePower(root)
+            else:
+                root.multipoleExpansion = 0.
 
         else:
             # traverse down the tree
@@ -306,7 +305,7 @@ class fmmSimulator(Simulator):
             for c in root.children:
                 root.multipoleExpansion += kernels.m2m(c, root, self.harmonics)
             # set fieldtensor to 0
-            root.fieldTensor = np.zeros_like(root.multipoleExpansion)
+            root.fieldTensor = np.zeros_like(self.harmonics.n_arr)
 
             # compute multipole powers if needed for MAC
             if isinstance(self.MAC, AdvancedAcceptanceCriterion):
@@ -358,6 +357,9 @@ class fmmSimulator(Simulator):
 
     def dualTreeWalk(self, A:Node, B:Node, mutual: bool):
         '''Do the tree walk and compute all interactions between cells.'''
+        # if one cell is empy stop here
+        if len(A.particleIds) == 0 or len(B.particleIds) == 0: return
+
         # approximate cell <-> cell if MAC is met (compute field tensors and pass down the tree)
         if self.MAC.eval(A,B, self.acc):
             self.approximate(A,B, mutual)
