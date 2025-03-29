@@ -4,6 +4,7 @@ Module contains kernel functions used in physical nBody simulations.
 from typing import Union
 import jax.numpy as jnp
 import numpy as np
+from numpy._core.multiarray import dtype
 from scipy.special import factorial, assoc_legendre_p_all
 from jax import jacfwd, vmap
 
@@ -43,6 +44,25 @@ class p2p():
         acc = acc[:,:,mod.newaxis] * r       # pyright: ignore
         return -1*G*mod.sum(acc, axis=1)   # pyright: ignore
     acceleration = grad
+    
+    @staticmethod
+    def grad_loops(source: Union[np.ndarray,jnp.ndarray], sink: Union[np.ndarray,jnp.ndarray], M:Union[np.ndarray, jnp.ndarray,float] = 1., G: float=1., use_jax:bool = False):
+        """Loop version for comparing unparallel FMM."""
+        mod = jnp if use_jax==True else np
+
+        acc = np.zeros_like(sink)
+        nSink = sink.shape[0]
+        nSource = source.shape[0]
+        masses = mod.array(M, dtype=float).reshape((nSource,))
+    
+        for si in range(nSink):
+            for so in range(nSource):
+                    r = sink[si] - source[so]
+                    r_norm = np.linalg.norm(r) 
+                    if r_norm > 0:
+                        acc[si] += (-1 * G * masses[so] / r_norm**3) * r
+
+        return acc
 
     @staticmethod
     def jacobian(source: jnp.ndarray, sink:jnp.ndarray, M: Union[jnp.ndarray, float] = jnp.array([1.]), G: float = 1) -> jnp.ndarray:
