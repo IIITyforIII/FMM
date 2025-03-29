@@ -155,7 +155,7 @@ if __name__ == '__main__':
     #TODO notes for later ---> DONT FORGET BOUNDARYCONDITION outside of simulator
     import time
     start = time.time()
-    pos,vel = createInitState(100, core_rad=10)
+    pos,vel = createInitState(50, core_rad=10)
     end = time.time()
     print('State prep:')
     print(end - start)
@@ -171,7 +171,7 @@ if __name__ == '__main__':
     from simlib.simulators import fmmSimulator
     from geolib.expansionCentres import SmallestEnclosingSphere, GeometricCenter, CenterOfMass
     from simlib.acceptanceCriterion import AdvancedAcceptanceCriterion, FixedAcceptanceCriterion
-    test = fmmSimulator(pos,vel,dMin,dMax,mass,expansionOrder=3, nCrit=3, acceptCrit=FixedAcceptanceCriterion(), nThreads=1)
+    test = fmmSimulator(pos,vel,dMin,dMax,mass,expansionOrder=8, nCrit=5, acceptCrit=FixedAcceptanceCriterion(0.48), nThreads=1)
 
 
     # directTest = nbodyDirectSimulator(pos,vel,mass)

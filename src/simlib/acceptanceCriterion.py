@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from ctypes import ArgumentError
 from typing import Optional
 import numpy as np
 from scipy.special import binom, factorial
@@ -6,7 +7,7 @@ from geolib.tree import Node
 
 class AcceptanceCriterion(ABC):
     @abstractmethod
-    def eval(self, A: Node, B:Node, a_f: Optional[np.ndarray]) -> bool:
+    def eval(self, A: Node, B:Node) -> bool:
         '''Evaluate the Multipole Acceptance criterion for potential in B due to A.'''
         pass
 
@@ -16,7 +17,8 @@ class FixedAcceptanceCriterion(AcceptanceCriterion):
     def __init__(self, angle: float = 1.) -> None:
         self.openAngle = angle
 
-    def eval(self, A: Node, B: Node, a_f: Optional[np.ndarray] = None) -> bool:
+    def eval(self, A: Node, B: Node) -> bool:
+        if (A == B): return False
         return (A.multipoleCenter[1] + B.potentialCenter[1])/np.linalg.norm(B.potentialCenter[0] - A.multipoleCenter[0]) < self.openAngle
 
 
@@ -25,8 +27,15 @@ class AdvancedAcceptanceCriterion(AcceptanceCriterion):
 
     def __init__(self, epsilon: float = 10**(-6.25)):
         self.eps = epsilon
+        self.a_f = None
 
-    def eval(self, A: Node, B:Node, a_f: Optional[np.ndarray]) -> bool:
+    def eval(self, A: Node, B:Node) -> bool:
+        if (A==B): return False
+        if self.a_f is None:
+            raise ArgumentError('a or f needed.')
+        else:
+            a_f = self.a_f
+
         dist = np.linalg.norm(B.potentialCenter[0] - A.multipoleCenter[0])
         # compute opening angle
         a = (A.multipoleCenter[1] + B.potentialCenter[1])/dist
@@ -43,6 +52,9 @@ class AdvancedAcceptanceCriterion(AcceptanceCriterion):
         for k in np.arange(order):
             res += binom(order-1, k) * A.multipolePower[k] * np.power(B.potentialCenter[1], order-1-k) / np.power(dist,order-1)
         return res/A.multipoleCenter[2]
+
+    def setAorF(self, a_f):
+        self.a_f = a_f
 
         
 

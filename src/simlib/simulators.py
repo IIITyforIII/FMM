@@ -4,7 +4,7 @@ import numpy as np
 from jax.typing import ArrayLike
 from numpy._core.defchararray import islower
 from geolib.expansionCentres import CenterOfMass, SmallestEnclosingSphere
-from geolib.tree import buildTree, getMortonSortedPermutation, Node
+from geolib.tree import applyBoundaryCondition, buildTree, getMortonSortedPermutation, Node, insertParticle
 from simlib.acceptanceCriterion import AcceptanceCriterion, AdvancedAcceptanceCriterion, FixedAcceptanceCriterion
 import simlib.kernels as kernels
 from jax import config
@@ -181,14 +181,18 @@ class fmmSimulator(Simulator):
         self.multipoleExpandCenter = None if expansionOrder >= 8 else CenterOfMass(multipole=True) # defines computation method of multipole expansion center
         self.potentialExpandCenter = SmallestEnclosingSphere(multipole=False) # defines computation method of potential/force expansion center
         self.MAC = acceptCrit
+        if isinstance(self.MAC, AdvancedAcceptanceCriterion):
+            self.estimator = fmmSimulator(self.pos,self.vel,domainMin,domainMax,self.masses,expansionOrder=1, nCrit=nCrit, acceptCrit=FixedAcceptanceCriterion(1.), nThreads=nThreads)
 
         # tree
+        self.domainMin = np.array(domainMin)
+        self.domainMax = np.array(domainMax)
         self.leafs = np.array([None] * len(self.pos)) # leafs[idx] corresponds to the leaf node of particle idx -> use for misfit calc
         perm = getMortonSortedPermutation(self.pos)  # morton sort the positions for spatial correlation especially for multithreading
         self.pos = self.pos[perm]
         import time
         start = time.time()
-        self.root = buildTree(self.pos, self.leafs, np.array(domainMin), np.array(domainMax), nCrit=nCrit, nThreads=nThreads)
+        self.root = buildTree(self.pos, self.leafs, self.domainMin, self.domainMax, nCrit=nCrit, nThreads=nThreads)
         end = time.time()
         print('tree build')
         print(end - start)
@@ -201,10 +205,19 @@ class fmmSimulator(Simulator):
         end =time.time()
         print('multipole step')
         print(end - start)
+        
 
         self.t = 0.
         # units
-        self.G = 1
+        self.G = 1.
+        print(self.acc)
+        start = time.time()
+        self.dualTreeWalk(self.root, self.root, mutual=True)
+        end = time.time()
+        print(end - start)
+        print(self.acc)
+
+
 
         if self.num_particles != len(self.vel):
             raise AssertionError('Size of position array does not match velocity array. ({} != {})'.format(self.num_particles, len(self.vel)))
@@ -212,39 +225,34 @@ class fmmSimulator(Simulator):
     def step(self, dt: float = 0.1):
         '''{}'''.format(Simulator.step.__doc__)
 
+        ### prepare AdvancedAcceptanceCriterion if needed
+        if isinstance(self.MAC, AdvancedAcceptanceCriterion):
+            self.estimator.resetState(self.pos,self.vel,self.masses)
+            a = np.linalg.norm(self.estimator.acc, axis=1)
+            self.MAC.setAorF(a)
+
         ### compute multipoles
         self.computeCentersAndMultipoles(self.root)
 
-        ### compute fieldtensors/ accelerations -> traverse tree
-        acc = np.array(self.num_particles)
-        # traverseTreeSimple(root) / traverseTreeDual(root)
+        ### reset acceleration array
+        self.acc.fill(0.)
 
-        ### update
-        # integrate motion formula and update positions
-        self.vel = self.vel + dt * acc 
+        ### compute fieldTensors and pass down
+        self.dualTreeWalk(self.root,self.root, self.expansionOrder >= 8)
+        self.downpassField(self.root)
+
+        ### update state (integrate motion formula and update positions)
+        self.vel = self.vel + dt * self.acc 
         self.pos = self.pos + dt * self.vel
-
-        # update time
         self.t = self.t + dt
 
         ### compute misfits
-        # mfits = computeMisfits(self.pos, self.leafs)
-        # for m in mfits:
-        #    insertParticle(self.pos, m, self.root, self.nCrit, self.multiThreaded) 
-
-    # def computeMultipoles(positions: jnp.ndarray, root: Node, order: int) -> None:
-    #     '''
-    #     Traverse the tree root, and compute the Multipole expansions of given order.
-    #
-    #     positions: jnp.ndarray
-    #         Positions of all particles, used for multipole computation of leafs.
-    #     root: Node
-    #         Entry point of tree traversing algo.
-    #     order: int
-    #         Expansion order of multipole expansion -> n = m = order
-    #     '''
-    #     pass
-
+        mfits = self.computeMisfitsAndRemove()
+        mfitp = self.pos[mfits]
+        applyBoundaryCondition(self.domainMin,self.domainMax, mfitp)
+        self.pos[mfits] = mfitp
+        for idx in mfits:
+            insertParticle(self.pos,self.leafs,idx,self.root,self.nCrit,self.multiThreaded)
 
     def getState(self) -> Tuple[float, list, list]:
         '''{}'''.format(Simulator.getState.__doc__)
@@ -290,6 +298,7 @@ class fmmSimulator(Simulator):
 
         else:
             # traverse down the tree
+            root.particleIds = []
             for c in root.children:
                 self.computeCentersAndMultipoles(c)
                 # propagate particle id information up the tree
@@ -361,7 +370,8 @@ class fmmSimulator(Simulator):
         if len(A.particleIds) == 0 or len(B.particleIds) == 0: return
 
         # approximate cell <-> cell if MAC is met (compute field tensors and pass down the tree)
-        if self.MAC.eval(A,B, self.acc):
+        if self.MAC.eval(A,B):
+
             self.approximate(A,B, mutual)
         
         # Do direct summation if we end up in 2 leafs
@@ -400,4 +410,25 @@ class fmmSimulator(Simulator):
                 self.dualTreeWalk(a,B,mutual)
                 if not mutual:
                     self.dualTreeWalk(B,a,mutual)
+
+    def downpassField(self, root:Node):
+        '''Pass down the fieldTensord down the tree to sinks.'''
+        if len(root.particleIds) == 0:
+            return
+        if not root.isLeaf:
+            for c in root.children:
+                c.fieldTensor += kernels.l2l(root,c,self.harmonics)
+                self.downpassField(c)
+        else: 
+            for p in root.particleIds:
+                self.acc[p] += kernels.l2p(root,self.pos[p], self.harmonics)
+
+    def computeMisfitsAndRemove(self):
+        msfts = []
+        for idx in range(len(self.pos)):
+            if np.any((self.leafs[idx].domainMin > self.pos[idx]) | (self.leafs[idx].domainMax < self.pos[idx])):
+                msfts.append(idx)
+                self.leafs[idx].particleIds.remove(idx)
+        return msfts
+
 
