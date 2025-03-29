@@ -220,15 +220,15 @@ def m2l(A: Node, B: Node, harmonic: SphericalHarmonics, accelerated: bool = Fals
 
     return res
 
-def l2l(child: Node, potentialCenter, fieldtensor, harmonic:SphericalHarmonics):
+def l2l(child: Node, parent: Node, harmonic:SphericalHarmonics):
     '''Compute the fieldtensor w.r.t. another expansion center. Passes fieldtensor down to child.'''
     shape = harmonic.n_arr.shape
     res = np.zeros(shape).astype(complex)
 
     # precomputation
-    dist = potentialCenter[0] - child.potentialCenter[0]
+    dist = parent.potentialCenter[0] - child.potentialCenter[0]
     harm = harmonic.ypsilon(dist)
-    field= fieldtensor
+    field= parent.fieldTensor
     expOrder = shape[0]
     # funtion to compute a single index
     # TODO: vectorization is hard... smh replace loops
@@ -253,8 +253,8 @@ def l2l(child: Node, potentialCenter, fieldtensor, harmonic:SphericalHarmonics):
 
     return res
 
-def l2p(leaf: Node, sink: np.ndarray, fieldtensor, harmonic:SphericalHarmonics):
-    '''Computes the the potential field at sinkposition, due to all other cells''' 
+def l2p(leaf: Node, sink: np.ndarray, harmonic:SphericalHarmonics):
+    '''Computes the the potential field at sinkposition due to the local expansion.''' 
     expOrder = harmonic.n_arr.shape[0] 
     #check if p was set to 0 , else max order 1 is needed 
     expOrder = expOrder if expOrder <= 1  else 2
@@ -264,7 +264,7 @@ def l2p(leaf: Node, sink: np.ndarray, fieldtensor, harmonic:SphericalHarmonics):
     # precomputation
     dist = leaf.potentialCenter[0] - sink
     harm = harmonic.ypsilon(dist)
-    field= fieldtensor
+    field= leaf.fieldTensor
     # funtion to compute a single index
     # TODO: vectorization is hard... smh replace loops
     def computePsi(n, m):

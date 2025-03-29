@@ -36,6 +36,7 @@ class Node():
     def __init__(self, domMin: np.ndarray, domMax: np.ndarray, multiThreading: bool = False) -> None:
         self.isLeaf = True
         self.particleIds = []
+        self.fieldTensor = None
         self.multipoleExpansion = None
         self.multipolePower = None
         self.domainMin = domMin
