@@ -15,7 +15,7 @@ class GeometricCenter(ExpansionCenter):
     '''Class computing an expansion center as the geometric cell center.'''
 
     def computeExpCenter(self, positions: np.ndarray, node: Node, masses: Optional[np.ndarray] = None) -> tuple:
-        return (node.domainMin + node.domainMax)/2 , 0
+        return (node.domainMin + node.domainMax)/2 , 0 #not used have to update mass and max distance if to use
 
 class SmallestEnclosingSphere(ExpansionCenter):
     '''Class computing an expansion center as the smalles enclosing sphere.'''
@@ -25,7 +25,7 @@ class SmallestEnclosingSphere(ExpansionCenter):
     def computeExpCenter(self, positions: np.ndarray, node: Node, masses: np.ndarray) -> tuple:
         if node.isLeaf: 
             if len(node.particleIds)== 0:
-                return None, None
+                return None, None, None
             parts = positions[node.particleIds]
             if len(parts)>1:
                 center, radius = miniball.get_bounding_ball(parts)

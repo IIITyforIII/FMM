@@ -2,13 +2,14 @@ from typing import Tuple
 import jax.numpy as jnp
 import numpy as np
 from jax.typing import ArrayLike
-from numpy._core.defchararray import islower
+from scipy.special import warnings
 from geolib.expansionCentres import CenterOfMass, SmallestEnclosingSphere
 from geolib.tree import applyBoundaryCondition, buildTree, getMortonSortedPermutation, Node, insertParticle
 from simlib.acceptanceCriterion import AcceptanceCriterion, AdvancedAcceptanceCriterion, FixedAcceptanceCriterion
 import simlib.kernels as kernels
 from jax import config
 from abc import ABC, abstractmethod
+import time
 
 class Simulator(ABC):
     @abstractmethod
@@ -178,8 +179,8 @@ class fmmSimulator(Simulator):
         # fmm related data
         self.expansionOrder = expansionOrder
         self.harmonics = kernels.SphericalHarmonics(self.expansionOrder, self.expansionOrder)
-        self.multipoleExpandCenter = None if expansionOrder >= 8 else CenterOfMass(multipole=True) # defines computation method of multipole expansion center
         self.potentialExpandCenter = SmallestEnclosingSphere(multipole=False) # defines computation method of potential/force expansion center
+        self.multipoleExpandCenter = None if expansionOrder >= 8 else CenterOfMass(multipole=True) # defines computation method of multipole expansion center
         self.MAC = acceptCrit
         if isinstance(self.MAC, AdvancedAcceptanceCriterion):
             self.estimator = fmmSimulator(self.pos,self.vel,domainMin,domainMax,self.masses,expansionOrder=1, nCrit=nCrit, acceptCrit=FixedAcceptanceCriterion(1.), nThreads=nThreads)
@@ -190,34 +191,14 @@ class fmmSimulator(Simulator):
         self.leafs = np.array([None] * len(self.pos)) # leafs[idx] corresponds to the leaf node of particle idx -> use for misfit calc
         perm = getMortonSortedPermutation(self.pos)  # morton sort the positions for spatial correlation especially for multithreading
         self.pos = self.pos[perm]
-        import time
-        start = time.time()
         self.root = buildTree(self.pos, self.leafs, self.domainMin, self.domainMax, nCrit=nCrit, nThreads=nThreads)
-        end = time.time()
-        print('tree build')
-        print(end - start)
         self.nCrit = nCrit
         self.nThreads = nThreads
         self.multiThreaded = nThreads > 1
 
-        start = time.time()
-        self.computeCentersAndMultipoles(self.root)
-        end =time.time()
-        print('multipole step')
-        print(end - start)
-        
-
         self.t = 0.
         # units
         self.G = 1.
-        print(self.acc)
-        start = time.time()
-        self.dualTreeWalk(self.root, self.root, mutual=True)
-        end = time.time()
-        print(end - start)
-        print(self.acc)
-
-
 
         if self.num_particles != len(self.vel):
             raise AssertionError('Size of position array does not match velocity array. ({} != {})'.format(self.num_particles, len(self.vel)))
@@ -227,32 +208,49 @@ class fmmSimulator(Simulator):
 
         ### prepare AdvancedAcceptanceCriterion if needed
         if isinstance(self.MAC, AdvancedAcceptanceCriterion):
+            print('estimation step ------------')
+            start = time.time()
             self.estimator.resetState(self.pos,self.vel,self.masses)
+            self.estimator.step()
             a = np.linalg.norm(self.estimator.acc, axis=1)
             self.MAC.setAorF(a)
+            print(time.time()-start)
+            print('----------------------------')
 
         ### compute multipoles
+        print('multipole step')
+        start = time.time()
         self.computeCentersAndMultipoles(self.root)
+        print(time.time() - start)
 
         ### reset acceleration array
         self.acc.fill(0.)
 
         ### compute fieldTensors and pass down
+        print('acc step')
+        start = time.time()
         self.dualTreeWalk(self.root,self.root, self.expansionOrder >= 8)
         self.downpassField(self.root)
+        print(time.time() - start)
 
         ### update state (integrate motion formula and update positions)
+        print('state update')
+        start = time.time()
         self.vel = self.vel + dt * self.acc 
         self.pos = self.pos + dt * self.vel
         self.t = self.t + dt
+        print(time.time() - start)
 
         ### compute misfits
+        print('misfit step')
+        start = time.time()
         mfits = self.computeMisfitsAndRemove()
         mfitp = self.pos[mfits]
         applyBoundaryCondition(self.domainMin,self.domainMax, mfitp)
         self.pos[mfits] = mfitp
         for idx in mfits:
             insertParticle(self.pos,self.leafs,idx,self.root,self.nCrit,self.multiThreaded)
+        print(time.time() - start)
 
     def getState(self) -> Tuple[float, list, list]:
         '''{}'''.format(Simulator.getState.__doc__)
@@ -263,6 +261,7 @@ class fmmSimulator(Simulator):
         self.pos = np.array(pos).reshape(-1,3)
         self.vel = np.array(vel).reshape(-1,3)
         self.masses = np.array(masses).reshape(-1,1)
+        self.acc.fill(0.)
 
     def setG(self, g: float) -> None:
         '''{}'''.format(Simulator.setG.__doc__)
@@ -273,7 +272,7 @@ class fmmSimulator(Simulator):
         pass
 
     def getName(self) -> str:
-        return 'Fast Multipole Method'
+        return 'FastMultipoleMethod'
 
     def getNumParticles(self) -> int:
         return self.num_particles
@@ -285,10 +284,10 @@ class fmmSimulator(Simulator):
             root.potentialCenter = self.potentialExpandCenter.computeExpCenter(self.pos,root,self.masses)
             root.multipoleCenter = self.multipoleExpandCenter.computeExpCenter(self.pos,root,self.masses) if self.multipoleExpandCenter is not None else root.potentialCenter
             
-            #compute multipole and init field tensor
+            #compute multipole and reset field tensor
             if len(root.particleIds) > 0:
                 root.multipoleExpansion = kernels.p2m(self.pos, root.particleIds, root.multipoleCenter[0], self.masses, self.harmonics)
-                root.fieldTensor = np.zeros_like(self.harmonics.n_arr)
+                root.fieldTensor = np.zeros_like(self.harmonics.n_arr).astype(complex)
 
                 # compute multipole Powers if needed for MAC
                 if isinstance(self.MAC, AdvancedAcceptanceCriterion):
@@ -298,7 +297,7 @@ class fmmSimulator(Simulator):
 
         else:
             # traverse down the tree
-            root.particleIds = []
+            root.particleIds = [] # might have changed after misfit calculation
             for c in root.children:
                 self.computeCentersAndMultipoles(c)
                 # propagate particle id information up the tree
@@ -310,11 +309,11 @@ class fmmSimulator(Simulator):
             root.multipoleCenter = self.multipoleExpandCenter.computeExpCenter(self.pos,root,self.masses) if self.multipoleExpandCenter is not None else root.potentialCenter
 
             # compute multipole
-            root.multipoleExpansion = np.zeros(self.harmonics.n_arr.shape).astype(complex) # pyright: ignore
+            root.multipoleExpansion = np.zeros_like(self.harmonics.n_arr).astype(complex) # pyright: ignore
             for c in root.children:
                 root.multipoleExpansion += kernels.m2m(c, root, self.harmonics)
-            # set fieldtensor to 0
-            root.fieldTensor = np.zeros_like(self.harmonics.n_arr)
+            # reset field tensor
+            root.fieldTensor = np.zeros_like(self.harmonics.n_arr).astype(complex)
 
             # compute multipole powers if needed for MAC
             if isinstance(self.MAC, AdvancedAcceptanceCriterion):
@@ -347,7 +346,10 @@ class fmmSimulator(Simulator):
         elif B.isLeaf:  # apple M2P
             for p in B.particleIds:
                 pot = kernels.m2p(A, self.pos[p], self.harmonics)
-                self.acc[p] += -1*np.array([pot[1,1].real, pot[1,1].imag, pot[1,0]])
+                # add test if imaginary part is small enough as pot[1,0] analytically should be real
+                if np.abs(pot[1,0].imag) > 1e-15:
+                    warnings.warn('Imaginart part > 1e-15 detected in potential. Psi[1,0] should be real.', UserWarning)
+                self.acc[p] += -1*np.array([pot[1,1].real, pot[1,1].imag, pot[1,0].real])
         else:           # apply M2L
             B.fieldTensor += kernels.m2l(A,B,self.harmonics)
 
@@ -359,7 +361,10 @@ class fmmSimulator(Simulator):
             elif A.isLeaf:
                 for p in A.particleIds:
                     pot = kernels.m2p(B, self.pos[p], self.harmonics)
-                    self.acc[p] += -1 * np.array([pot[1,1].real, pot[1,1].imag, pot[1,0]])
+                    # add test if imaginary part is small enough as pot[1,0] analytically should be real
+                    if np.abs(pot[1,0].imag) > 1e-15:
+                        warnings.warn('Imaginart part > 1e-15 detected in potential. Psi[1,0] should be real.', UserWarning)
+                    self.acc[p] += -1 * np.array([pot[1,1].real, pot[1,1].imag, pot[1,0].real])
             else:
                 A.fieldTensor += kernels.m2l(B,A,self.harmonics)
         
@@ -371,7 +376,6 @@ class fmmSimulator(Simulator):
 
         # approximate cell <-> cell if MAC is met (compute field tensors and pass down the tree)
         if self.MAC.eval(A,B):
-
             self.approximate(A,B, mutual)
         
         # Do direct summation if we end up in 2 leafs
@@ -417,11 +421,16 @@ class fmmSimulator(Simulator):
             return
         if not root.isLeaf:
             for c in root.children:
-                c.fieldTensor += kernels.l2l(root,c,self.harmonics)
+                if len(c.particleIds) > 0:
+                    c.fieldTensor += kernels.l2l(root,c,self.harmonics) 
                 self.downpassField(c)
         else: 
             for p in root.particleIds:
-                self.acc[p] += kernels.l2p(root,self.pos[p], self.harmonics)
+                pot = kernels.l2p(root,self.pos[p], self.harmonics)
+                # add test if imaginary part is small enough as pot[1,0] analytically should be real
+                if np.abs(pot[1,0].imag) > 1e-15:
+                    warnings.warn('Imaginart part > 1e-15 detected in potential. Psi[1,0] should be real.', UserWarning)
+                self.acc[p] += -1 * np.array([pot[1,1].real, pot[1,1].imag, pot[1,0].real])
 
     def computeMisfitsAndRemove(self):
         msfts = []

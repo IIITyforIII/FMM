@@ -280,7 +280,7 @@ def animateTimeSeries(directory: str,renderAsSpheres: bool = False, scaleFactor:
                 self.counter.decrement()
                 reader.SetFileName(files[self.counter.getCurrentFrame()])
                 reader.Update()
-                # renWin.Render()
+                renWin.Render()
 
     class timerCallback():
         def __init__(self, iren, counter:counter):

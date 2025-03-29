@@ -130,9 +130,9 @@ if __name__ == '__main__':
     num_particles = 1000
     core_rad     = 10
     # sim params
-    total_time = 50   
+    total_time = 5   
     time_step  = 0.01 
-    path = 'data/testSim'
+    path = 'data/testFMM'
 
     sim = False
 
@@ -148,18 +148,20 @@ if __name__ == '__main__':
         runSimulation(simulator,path,total_time,time_step)
 
     # anim results
-    # from utils.visualization import animateTimeSeries
+    from utils.visualization import animateTimeSeries
+    from utils.visualization import renderPointCloudInteractive
     # animateTimeSeries(path+'/directSummation', scaleFactor=0.2, interactive=False, animRate=20)
+    # animateTimeSeries(path+'/Fast Multipole Method', scaleFactor=0.2, interactive=False, animRate=20)
 
 
     #TODO notes for later ---> DONT FORGET BOUNDARYCONDITION outside of simulator
     import time
     start = time.time()
-    pos,vel = createInitState(50, core_rad=10)
+    pos,vel = createInitState(1000, core_rad=10)
     end = time.time()
     print('State prep:')
     print(end - start)
-    dMax = np.array([50,50,50])     
+    dMax = np.array([500,500,500])     
     dMin = -1*dMax
     mass = np.ones(len(pos))
     applyBoundaryCondition(dMin, dMax, pos)
@@ -167,11 +169,14 @@ if __name__ == '__main__':
     # from physlib.densityModels import UniformBox
     # pos = UniformBox([0,0,0], 100,100,100).sample(10000)
     #TODO notes plummer sphere brauch länger. dichtere verteilung in der mitte, mehr m2m -> mehr dauer
+    model = {'Name': 'Plummer', 'Core radius': 10, 'Particles': 5000}
+    writeMetaData(path+'/simInfo.yaml', model,'Natural Units',total_time=total_time,dt=time_step,adaptive=False,out_frequency=1)
 
     from simlib.simulators import fmmSimulator
     from geolib.expansionCentres import SmallestEnclosingSphere, GeometricCenter, CenterOfMass
     from simlib.acceptanceCriterion import AdvancedAcceptanceCriterion, FixedAcceptanceCriterion
-    test = fmmSimulator(pos,vel,dMin,dMax,mass,expansionOrder=8, nCrit=5, acceptCrit=FixedAcceptanceCriterion(0.48), nThreads=1)
+    test = fmmSimulator(pos,vel,dMin,dMax,mass,expansionOrder=8, nCrit=32, acceptCrit=FixedAcceptanceCriterion(0.4), nThreads=1)
+    runSimulation(test, path,total_time, time_step)
 
 
     # directTest = nbodyDirectSimulator(pos,vel,mass)

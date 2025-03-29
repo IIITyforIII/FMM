@@ -36,14 +36,15 @@ class Node():
     def __init__(self, domMin: np.ndarray, domMax: np.ndarray, multiThreading: bool = False) -> None:
         self.isLeaf = True
         self.particleIds = []
-        self.fieldTensor = None
-        self.multipoleExpansion = None
-        self.multipolePower = None
         self.domainMin = domMin
         self.domainMax = domMax
         self.children = []
+        # fmm related (set in multipole step and tree walk)
         self.multipoleCenter = (None, None, None)
         self.potentialCenter = (None, None, None)
+        self.fieldTensor = None
+        self.multipoleExpansion = None
+        self.multipolePower = None
 
         #threading
         if multiThreading:
