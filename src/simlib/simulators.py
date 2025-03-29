@@ -2,6 +2,7 @@ from typing import Tuple
 import jax.numpy as jnp
 import numpy as np
 from jax.typing import ArrayLike
+from numpy._core.defchararray import islower
 from geolib.expansionCentres import CenterOfMass, SmallestEnclosingSphere
 from geolib.tree import buildTree, getMortonSortedPermutation, Node
 from simlib.acceptanceCriterion import AcceptanceCriterion, AdvancedAcceptanceCriterion, FixedAcceptanceCriterion
@@ -281,6 +282,8 @@ class fmmSimulator(Simulator):
                 root.multipoleExpansion = kernels.p2m(self.pos, root.particleIds, root.multipoleCenter[0], self.masses, self.harmonics)
             else:
                 root.multipoleExpansion = 0 # pyright: ignore
+            # set field tensor to 0
+            root.fieldTensor = np.zeros_like(root.multipoleExpansion)
 
             # compute multipole Powers if needed for MAC
             if isinstance(self.MAC, AdvancedAcceptanceCriterion):
@@ -302,24 +305,97 @@ class fmmSimulator(Simulator):
             root.multipoleExpansion = np.zeros(self.harmonics.n_arr.shape).astype(complex) # pyright: ignore
             for c in root.children:
                 root.multipoleExpansion += kernels.m2m(c, root, self.harmonics)
+            # set fieldtensor to 0
+            root.fieldTensor = np.zeros_like(root.multipoleExpansion)
 
             # compute multipole powers if needed for MAC
             if isinstance(self.MAC, AdvancedAcceptanceCriterion):
                 root.multipolePower = self.MAC.computeMultipolePower(root)
 
-    def approximate(self, A:Node, B:Node, mutual:bool = True):
-        '''Compute the approximate potentials between A and B.'''
-        if len(A.particleIds) < self.expansionOrder**2:
-            pass
+    def approximate(self, A:Node, B:Node, mutual:bool):
+        '''Compute interaction between cells and pass it down the tree.'''
 
-    def dualTreeWalk(self, A:Node, B:Node, mutual:bool = True):
-        # test if direct summation is faster (Cell -> Cell)
-        ids = np.hstack((A.particleIds,B.particleIds))
+        # check if direct summation is more efficient 
+        ids  = np.hstack((A.particleIds,B.particleIds))
+        idsA = ids if mutual else A.particleIds
+        idsB = ids if mutual else B.particleIds
+        if A.isLeaf:
+            if len(B.particleIds) < self.expansionOrder**2 or (mutual and len(A.particleIds) < 4*self.expansionOrder**2): # test if direct summation is faster
+                self.acc[idsB] += kernels.p2p.acceleration(self.pos[idsA],self.pos[idsB], self.masses[idsA], G=self.G, use_jax=False)
+                return
+        if B.isLeaf:
+            if len(A.particleIds) < 4*self.expansionOrder**2 or (mutual and len(B.particleIds) < self.expansionOrder**2): # test if direct summation is faster
+                self.acc[idsB] += kernels.p2p.acceleration(self.pos[idsA],self.pos[idsB], self.masses[idsA], G=self.G, use_jax=False)
+                return
+        # if no node is leaf
         if len(ids) < self.expansionOrder**3:
-            self.acc[ids] += kernels.p2p.acceleration(self.pos[ids], self.pos[ids], self.masses[ids], G=self.G, use_jax=False)
+            self.acc[idsB] += kernels.p2p.acceleration(self.pos[idsA], self.pos[idsB], self.masses[idsA], G=self.G, use_jax=False)
             return 
 
+        # compute A->B approx.
+        if A.isLeaf:    # apply P2L
+            for p in A.particleIds:
+                B.fieldTensor += kernels.p2l(self.pos[p], self.masses[p], B, self.harmonics)  
+        elif B.isLeaf:  # apple M2P
+            for p in B.particleIds:
+                pot = kernels.m2p(A, self.pos[p], self.harmonics)
+                self.acc[p] += -1*np.array([pot[1,1].real, pot[1,1].imag, pot[1,0]])
+        else:           # apply M2L
+            B.fieldTensor += kernels.m2l(A,B,self.harmonics)
+
+        # compute B->A approx. if mutual
+        if mutual:
+            if B.isLeaf:
+                for p in B.particleIds:
+                    A.fieldTensor += kernels.p2l(self.pos[p], self.masses[p], A, self.harmonics)
+            elif A.isLeaf:
+                for p in A.particleIds:
+                    pot = kernels.m2p(B, self.pos[p], self.harmonics)
+                    self.acc[p] += -1 * np.array([pot[1,1].real, pot[1,1].imag, pot[1,0]])
+            else:
+                A.fieldTensor += kernels.m2l(B,A,self.harmonics)
+        
+
+    def dualTreeWalk(self, A:Node, B:Node, mutual: bool):
+        '''Do the tree walk and compute all interactions between cells.'''
+        # approximate cell <-> cell if MAC is met (compute field tensors and pass down the tree)
         if self.MAC.eval(A,B, self.acc):
-            # do approximation using multipoleExpansion
-            self.approximate(A,B,mutual)
-            
+            self.approximate(A,B, mutual)
+        
+        # Do direct summation if we end up in 2 leafs
+        elif (A.isLeaf and B.isLeaf):
+            ids = np.hstack((A.particleIds,B.particleIds))
+            self.acc[ids] += kernels.p2p.acceleration(self.pos[ids], self.pos[ids], self.masses[ids], G=self.G, use_jax=False)
+
+        # split internal node if one is leaf
+        elif (A.isLeaf):
+            for b in B.children:
+                self.dualTreeWalk(A,b, mutual)
+                if not mutual:
+                    self.dualTreeWalk(b,A, mutual)
+        elif (B.isLeaf):
+            for a in A.children:
+                self.dualTreeWalk(a, B, mutual)
+                if not mutual:
+                    self.dualTreeWalk(B, a, mutual)
+
+        # we have to catch the case of A==B
+        # perform tree walk for every child pair (have to be called twice for every pair in a non mutual version)
+        elif A == B:
+            for a in range(len(A.children)):
+                start = a if mutual else 0
+                for b in range(start, len(B.children)):
+                    self.dualTreeWalk(A.children[a],B.children[b], mutual)
+
+        # otherwise we open the larger cell 
+        elif A.potentialCenter[1] < B.potentialCenter[1]:
+            for b in B.children:
+                self.dualTreeWalk(A,b,mutual)
+                if not mutual:
+                    self.dualTreeWalk(b,A,mutual)
+        else:
+            for a in A.children:
+                self.dualTreeWalk(a,B,mutual)
+                if not mutual:
+                    self.dualTreeWalk(B,a,mutual)
+
