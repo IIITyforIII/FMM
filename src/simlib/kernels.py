@@ -280,7 +280,7 @@ def l2p(leaf: Node, sink: np.ndarray, harmonic:SphericalHarmonics):
 
     # compute fieldtensor
     # m_ids = np.hstack((np.arange(expOrder), np.arange(-1* expOrder + 1, 0)))
-    m_ids = np.arange(-expOrder+1, expOrder)
+    m_ids = np.arange(expOrder)
     n_ids = np.arange(expOrder)
     for n in n_ids:
         for m in m_ids:
@@ -294,3 +294,37 @@ def p2l(source: np.ndarray, mass: float, sinkCell: Node, harmonic:SphericalHarmo
     harm = harmonic.theta(dist)
     return mass * harm
 
+def m2p(sourceCell: Node, sink: np.ndarray, harmonic:SphericalHarmonics):
+    '''Computes the the potential field at sinkposition due to a multipole.''' 
+    expOrder = harmonic.n_arr.shape[0] 
+    #check if p was set to 0 , else max order 1 is needed 
+    expOrder = expOrder if expOrder <= 1  else 2
+    # no negative orders needed for acceleration
+    res = np.zeros((expOrder,expOrder)).astype(complex)
+
+    # precomputation
+    dist = sink - sourceCell.multipoleCenter[0]
+    harm = harmonic.theta(dist)
+    mult = sourceCell.multipoleExpansion
+    # funtion to compute a single index
+    # TODO: vectorization is hard... smh replace loops
+    def computePsi(n, m):
+        res = 0.
+        for k in np.arange(expOrder-n):
+            for l in np.arange(-k, k+1):
+                n_k = n + k
+                m_l = m + l
+                # filter out orders out of bounds
+                if np.abs(m_l) <= n_k:
+                    res += np.conjugate(mult[k,l]) * harm[n_k,m_l]
+        return res
+
+    # compute fieldtensor
+    # m_ids = np.hstack((np.arange(expOrder), np.arange(-1* expOrder + 1, 0)))
+    m_ids = np.arange(expOrder)
+    n_ids = np.arange(expOrder)
+    for n in n_ids:
+        for m in m_ids:
+            res[n,m] = computePsi(n,m)
+
+    return res
