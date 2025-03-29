@@ -14,7 +14,7 @@ class p2p():
     '''Particle-to-Particle (P2P) kernel.'''
 
     @staticmethod
-    def apply(sink: Union[np.ndarray,jnp.ndarray], source: Union[np.ndarray,jnp.ndarray], M: Union[np.ndarray, jnp.ndarray, float] = 1., G: float = 1, use_jax: bool = False) -> jnp.ndarray:
+    def apply(source: Union[np.ndarray,jnp.ndarray], sink: Union[np.ndarray,jnp.ndarray], M: Union[np.ndarray, jnp.ndarray, float] = 1., G: float = 1, use_jax: bool = False) -> jnp.ndarray:
         '''
         Calculate the (negative) potentials of sinks using pairwise Particle-to-Particle interactions to sources.
         '''
@@ -28,7 +28,7 @@ class p2p():
     potential = apply
 
     @staticmethod
-    def grad(sink: Union[np.ndarray,jnp.ndarray], source: Union[np.ndarray,jnp.ndarray], M: Union[np.ndarray,jnp.ndarray,float]= 1., G: float = 1, use_jax:bool = False) -> jnp.ndarray:
+    def grad(source: Union[np.ndarray,jnp.ndarray], sink: Union[np.ndarray,jnp.ndarray], M: Union[np.ndarray,jnp.ndarray,float]= 1., G: float = 1, use_jax:bool = False) -> jnp.ndarray:
         '''
         Calculate accelerations (gradient of (negative) potential) using pairwise Particle-to-Particle interactions.
         '''
@@ -45,7 +45,7 @@ class p2p():
     acceleration = grad
 
     @staticmethod
-    def jacobian(sink: jnp.ndarray, source:jnp.ndarray, M: Union[jnp.ndarray, float] = jnp.array([1.]), G: float = 1) -> jnp.ndarray:
+    def jacobian(source: jnp.ndarray, sink:jnp.ndarray, M: Union[jnp.ndarray, float] = jnp.array([1.]), G: float = 1) -> jnp.ndarray:
         ''' Calculate the jacobian (∇(∇ϕ)) for all sinks using pairwise P2P kernel'''
         sink = sink.reshape(-1, 3)
         g = jacfwd(lambda x: p2p.grad(x, source, M, G, use_jax=True)[0])
