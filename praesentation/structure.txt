@@ -1,0 +1,43 @@
+-----------------------Introduction:-------------------------
+problem with direct summation (computational complexity)
+
+idea behind FMM (summarize near particles so that summation does not need to be computed between every particle
+
+
+-----------------------FMM Details---------------------
+what does each kernel do? (use graph from paper maybe)
+  -> cartesian derivation (gives good intuition)
+  => spherical harmonic equivalent leads to fmm (just provide) => equals to our kernels
+
+harmonic values / what are sensible simulation settings
+  -> how to choose opening angle => improved error metric as in paper 
+    -> why is it better
+    -> double fmm walk (simple fmm as approx of opening angle into full order for timestep)
+  -> expansion centres (p<8 -> com , p>8 -> sep)
+
+
+----------------------Implementation--------------------------
+maybe classes like particle etc. (i dont think they need to be explained but idk)
+
+tree build 
+  -> particle insertion method (prob simplest common solution)
+
+Oct tree
+(Upward pass(calculation of multipoles) / Downward pass(calculation of accelerations of individual particles)
+  
+
+
+
+VTK
+  -> defacto standart for scientific data visualization
+  -> particles as gaussian blur -> good visualisation of dense regions in contrast to sparse
+
+-------------------Approximation Error?------------------------
+
+explain why absolute error is useless 
+ -> use scaled of averaged errors 
+ -> provide our results
+
+
+-------------------------Summary?-------------------------
+(i dont think we need, i would just use our results as conclusion -> finish with a 'nice' simulation xD)
