@@ -3,21 +3,13 @@
 This repository contains an implementation of the Fast Multipole Method (FMM) as described [here](https://comp-astrophys-cosmol.springeropen.com/articles/10.1186/s40668-014-0001-7). The code is designed for high-performance collisional N-body simulations in astrophysics, where efficient computation of gravitational forces is critical. It leverages multipole expansions and spherical harmonics to accurately and efficiently approximate gravitational interactions.
 
 
-# ToDo:
-delete:
-- can fmm, main.py, oct_tree, sim
-
 ## Reproduction
 1. **Prerequisites:**
 ```bash
-git clone https://github.com/IIITyforIII/FMM #clone reo
-```
-
-1.1: Using uv (recommended:)
-
-1.2 Python:
-```bash
-pip install -r requirements.txt #...
+git clone https://github.com/IIITyforIII/FMM
+cd FMM
+pip install -r requirements.txt
+python src/simulationBase.py
 ```
 
 ## Visualizations
@@ -29,22 +21,22 @@ pip install -r requirements.txt #...
 
 ### geolib (`src/geolib`)
 - Tree implementation based on [here](https://ieeexplore.ieee.org/document/6495868)
-- cell.py Cell class
-- tree.py ()
+- cell.py (cell class)
+- tree.py (oct-tree for spatial partitioning using Morton sorting, node splitting, periodic boundary handling, and optional multi-threaded particle insertion.)
+- expansionCentres.py (interface for computing expansion centers in tree nodes)
 - 
 ### physlib (`src/physlib`)
 - densityModels.py (density model classes (UniformBox, UniformSphere, and PlummerSphere) for sampling particle positions, velocities)
+-  entities.py (Particle and Star classes for representing point masses in 3D space)
 
 ### simlib (`src/simlib`)
-- kernels.py ( functions for particle interactions (P2P with its gradients, jerks, and snaps) and multipole translations using spherical harmonics (p2m, m2m, m2l, and l2l).)
-- simulators.py
-- acceptanceCriterion.py
-- 
-### utils
+- kernels.py (functions for particle interactions (P2P with its gradients, jerks, and snaps) and multipole translations using spherical harmonics (p2m, m2m, m2l, and l2l).)
+- simulators.py (defines n-body Simulator interface, nbodyDirectSimulator and fmmSimulator )
+- acceptanceCriterion.py (acceptance criterions for multipole approximations)
+
+### utils (`src/utils`)
 - performancetest
 - visualization.py
-### physlib
-- create different environments
 
 
 ## Structure
