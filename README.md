@@ -1,6 +1,6 @@
 # Fast Multipole Method for N-body Simulations
 
-This repository contains an implementation of the Fast Multipole Method (FMM) as described by Dehnen ([2014](https://comp-astrophys-cosmol.springeropen.com/articles/10.1186/s40668-014-0001-7)). The code is designed for high-performance collisional N-body simulations in astrophysics, where efficient computation of gravitational forces is critical. It leverages multipole expansions and spherical harmonics to accurately and efficiently approximate gravitational interactions.
+This repository contains an implementation of the Fast Multipole Method (FMM) as described by Dehnen ([2014](https://comp-astrophys-cosmol.springeropen.com/articles/10.1186/s40668-014-0001-7)). The code is designed for efficient collisional N-body simulations in astrophysics. It leverages multipole expansions and spherical harmonics to accurately and efficiently approximate gravitational interactions. Additionally, it includes code for comparison of the FMM approach to the direction summation method and visualization methods for both.
 
 
 ## Setup 
@@ -13,13 +13,13 @@ source .venv/bin/activate
 pip install -r requirements.txt # or requriements-cuda12.txt (for GPU acceleration) 
 ```
 
-## Run simulation
+## Running the simulation
 ```bash
 python src/simulationBase.py
 ```
 
 
-## Supported Visualizations (see `src/utils/visualization.py`)
+## Visualization methods (see `src/utils/visualization.py`)
 1. Volume Rendering of a Point Cloud Density Map
 2. Point Cloud Visualization
 3. Time Series Animation
@@ -29,13 +29,13 @@ python src/simulationBase.py
 ### geolib (`src/geolib`)
 
 - **Tree Implementation:** Based on Taura et al. ([2012](https://ieeexplore.ieee.org/document/6495868)).
-- **cell.py:** Contains the cell class.
+- **cell.py:** Contains the `Cell` class.
 - **tree.py:** Implements an oct-tree for spatial partitioning using Morton sorting, node splitting, periodic boundary handling, and optional multi-threaded particle insertion.
 - **expansionCentres.py:** Provides an interface for computing expansion centers in tree nodes.
 
 ### physlib (`src/physlib`)
 
-- **densityModels.py:** Density model classes (UniformBox, UniformSphere, and PlummerSphere) for sampling particle positions and velocities.
+- **densityModels.py:** Density model classes (`UniformBox`, `UniformSphere`, and `PlummerSphere`) for sampling particle positions and velocities.
 - **entities.py:** Defines Particle and Star classes for representing point masses in 3D space.
 
 ### simlib (`src/simlib`)
@@ -47,7 +47,7 @@ python src/simulationBase.py
 ### utils (`src/utils`)
 
 - **performanceTest.py:** Benchmarks and plots the performance of direct summation versus FMM as the particle count increases.
-- **visualization.py:** Leverages VTK to visualize and animate point cloud data.
+- **visualization.py:** Leverages the [VTK](https://vtk.org/) libary to visualize point cloud data.
 
 
 ## Structure
