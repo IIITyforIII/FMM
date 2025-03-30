@@ -114,3 +114,11 @@ def mapCartToPolar(cartesian: np.ndarray):
     theta = jnp.arccos(cartesian[2]/ r) if r!=0 else 0.
     phi = np.arctan2(cartesian[1] , cartesian[0]) 
     return np.array([r, theta, phi])
+
+
+def mapPolarToCart(polar: np.ndarray):
+    """Convert point to cartesian coordinates."""
+    x = polar[0] * np.sin(polar[1]) * np.cos(polar[2])
+    y = polar[0] * np.sin(polar[1]) * np.sin(polar[2])
+    z = polar[0] * np.cos(polar[1])
+    return np.array([x, y, z])

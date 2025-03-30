@@ -319,6 +319,34 @@ class fmmSimulator(Simulator):
             if isinstance(self.MAC, AdvancedAcceptanceCriterion):
                 root.multipolePower = self.MAC.computeMultipolePower(root)
 
+    def approximateSimple(self, A:Node, B:Node):
+        '''implementation of simpler version omitting field tensors.'''
+        # # direct sum test
+        # ids = np.hstack((A.particleIds, B.particleIds))
+        # if len(A.particleIds) < 4*(self.expansionOrder**2) or len(B.particleIds) < 4*(self.expansionOrder**2):
+        #     self.acc[ids] += kernels.p2p.acceleration(self.pos[ids],self.pos[ids], self.masses[ids], G=self.G, use_jax=False)
+        #     return
+
+        # A -> B , compute m2p
+        if B.isLeaf: 
+            for p in B.particleIds:
+                pot = kernels.m2p(A, self.pos[p], self.harmonics)
+                # add test if imaginary part is small enough as pot[1,0] analytically should be real
+                if np.abs(pot[1,0].imag) > 1e-15:
+                    warnings.warn('Imaginart part > 1e-15 detected in potential. Psi[1,0] should be real.', UserWarning)
+                self.acc[p] += -1*np.array([pot[1,1].real, pot[1,1].imag, pot[1,0].real])
+
+        # B -> A, compute m2p
+        if A.isLeaf:
+            for p in A.particleIds:
+                pot = kernels.m2p(B, self.pos[p], self.harmonics)
+                # add test if imaginary part is small enough as pot[1,0] analytically should be real
+                if np.abs(pot[1,0].imag) > 1e-15:
+                    warnings.warn('Imaginart part > 1e-15 detected in potential. Psi[1,0] should be real.', UserWarning)
+                self.acc[p] += -1*np.array([pot[1,1].real, pot[1,1].imag, pot[1,0].real])
+
+
+
     def approximate(self, A:Node, B:Node, mutual:bool):
         '''Compute interaction between cells and pass it down the tree.'''
 
@@ -377,6 +405,7 @@ class fmmSimulator(Simulator):
         # approximate cell <-> cell if MAC is met (compute field tensors and pass down the tree)
         if self.MAC.eval(A,B):
             self.approximate(A,B, mutual)
+            # self.approximateSimple(A,B)
         
         # Do direct summation if we end up in 2 leafs
         elif (A.isLeaf and B.isLeaf):
