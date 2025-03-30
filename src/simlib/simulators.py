@@ -322,7 +322,7 @@ class fmmSimulator(Simulator):
     def approximate(self, A:Node, B:Node, mutual:bool):
         '''Compute interaction between cells and pass it down the tree.'''
 
-        # check if direct summation is more efficient 
+        #check if direct summation is more efficient 
         ids  = np.hstack((A.particleIds,B.particleIds))
         idsA = ids if mutual else A.particleIds
         idsB = ids if mutual else B.particleIds
@@ -337,7 +337,7 @@ class fmmSimulator(Simulator):
         # if no node is leaf
         if len(ids) < self.expansionOrder**3:
             self.acc[idsB] += kernels.p2p.acceleration(self.pos[idsA], self.pos[idsB], self.masses[idsA], G=self.G, use_jax=False)
-            return 
+            return
 
         # compute A->B approx.
         if A.isLeaf:    # apply P2L
@@ -380,7 +380,7 @@ class fmmSimulator(Simulator):
         
         # Do direct summation if we end up in 2 leafs
         elif (A.isLeaf and B.isLeaf):
-            ids = np.hstack((A.particleIds,B.particleIds))
+            ids = np.hstack((A.particleIds,B.particleIds)) if A != B else A.particleIds
             self.acc[ids] += kernels.p2p.acceleration(self.pos[ids], self.pos[ids], self.masses[ids], G=self.G, use_jax=False)
 
         # split internal node if one is leaf
