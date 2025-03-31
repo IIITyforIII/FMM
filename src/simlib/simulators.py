@@ -84,7 +84,7 @@ class nbodyDirectSimulator(Simulator):
     Simulator for a n-body particle simulation using direct summation.
     Excpects natural units (G=1) in default, else use setG(). Calculations are performed unit agnostic.
     '''
-    def __init__(self, initPos: ArrayLike, initVel: ArrayLike, masses: ArrayLike) -> None:
+    def __init__(self, initPos: ArrayLike, initVel: ArrayLike, masses: ArrayLike, loop: bool = False) -> None:
         '''
         Parameters
         ----------
@@ -97,15 +97,17 @@ class nbodyDirectSimulator(Simulator):
         '''
         # set state
         config.update("jax_enable_x64", True)
-        self.pos = jnp.array(initPos, dtype=jnp.float64).reshape(-1,3)
+        self.pos = jnp.array(initPos, dtype=jnp.float64).reshape(-1,3) if not loop else np.array(initPos, dtype=np.float64).reshape(-1,3)
         self.num_particles = len(self.pos)
-        self.vel = jnp.array(initVel, dtype = jnp.float64).reshape(-1,3)
-        self.masses = jnp.array(masses, dtype= float).reshape(-1,1)
+        self.vel = jnp.array(initVel, dtype = jnp.float64).reshape(-1,3) if not loop else np.array(initPos, dtype=np.float64).reshape(-1,3)
+        self.masses = jnp.array(masses, dtype= float).reshape(-1,1) if not loop else np.array(masses,dtype=float).reshape(-1,1)
 
         self.t = 0
 
         # units
         self.G = 1
+
+        self.loop = loop
 
         if self.num_particles != len(self.vel):
             raise AssertionError('Size of position array does not match velocity array. ({} != {})'.format(self.num_particles, len(self.vel)))
@@ -125,7 +127,10 @@ class nbodyDirectSimulator(Simulator):
     def step(self, dt: float = 0.1):
         '''{}'''.format(Simulator.step.__doc__)
         # calculate resulting accelerations using P2P kernel.
-        acc = kernels.p2p.acceleration(self.pos, self.pos, self.masses, self.G, use_jax=True)
+        if self.loop:
+            acc = kernels.p2p.grad_loops(self.pos, self.pos, self.masses,self.G,use_jax=False)
+        else:
+            acc = kernels.p2p.acceleration(self.pos, self.pos, self.masses, self.G, use_jax=True)
         
         # integrate motion formula and update positions
         self.vel = self.vel + dt * acc 
@@ -229,7 +234,7 @@ class fmmSimulator(Simulator):
         ### compute fieldTensors and pass down
         print('acc step')
         start = time.time()
-        self.dualTreeWalk(self.root,self.root, self.expansionOrder >= 8)
+        self.dualTreeWalk(self.root,self.root, True)
         self.downpassField(self.root)
         print(time.time() - start)
 
@@ -287,7 +292,7 @@ class fmmSimulator(Simulator):
             #compute multipole and reset field tensor
             if len(root.particleIds) > 0:
                 root.multipoleExpansion = kernels.p2m(self.pos, root.particleIds, root.multipoleCenter[0], self.masses, self.harmonics)
-                root.fieldTensor = np.zeros_like(self.harmonics.n_arr).astype(complex)
+                root.fieldTensor = np.zeros_like(self.harmonics.n_arr).astype(np.complex128)
 
                 # compute multipole Powers if needed for MAC
                 if isinstance(self.MAC, AdvancedAcceptanceCriterion):
@@ -309,64 +314,72 @@ class fmmSimulator(Simulator):
             root.multipoleCenter = self.multipoleExpandCenter.computeExpCenter(self.pos,root,self.masses) if self.multipoleExpandCenter is not None else root.potentialCenter
 
             # compute multipole
-            root.multipoleExpansion = np.zeros_like(self.harmonics.n_arr).astype(complex) # pyright: ignore
+            root.multipoleExpansion = np.zeros_like(self.harmonics.n_arr).astype(np.complex128) # pyright: ignore
             for c in root.children:
                 root.multipoleExpansion += kernels.m2m(c, root, self.harmonics)
             # reset field tensor
-            root.fieldTensor = np.zeros_like(self.harmonics.n_arr).astype(complex)
+            root.fieldTensor = np.zeros_like(self.harmonics.n_arr).astype(np.complex128)
 
             # compute multipole powers if needed for MAC
             if isinstance(self.MAC, AdvancedAcceptanceCriterion):
                 root.multipolePower = self.MAC.computeMultipolePower(root)
 
-    def approximate(self, A:Node, B:Node, mutual:bool):
-        '''Compute interaction between cells and pass it down the tree.'''
+    def approximateSimple(self, A:Node, B:Node):
+        '''implementation of simpler version omitting field tensors.'''
+        # # direct sum test
+        # ids = np.hstack((A.particleIds, B.particleIds))
+        # if len(A.particleIds) < 4*(self.expansionOrder**2) or len(B.particleIds) < 4*(self.expansionOrder**2):
+        #     self.acc[ids] += kernels.p2p.acceleration(self.pos[ids],self.pos[ids], self.masses[ids], G=self.G, use_jax=False)
+        #     return
 
-        #check if direct summation is more efficient 
-        ids  = np.hstack((A.particleIds,B.particleIds))
-        idsA = ids if mutual else A.particleIds
-        idsB = ids if mutual else B.particleIds
-        if A.isLeaf:
-            if len(B.particleIds) < self.expansionOrder**2 or (mutual and len(A.particleIds) < 4*self.expansionOrder**2): # test if direct summation is faster
-                self.acc[idsB] += kernels.p2p.acceleration(self.pos[idsA],self.pos[idsB], self.masses[idsA], G=self.G, use_jax=False)
-                return
-        if B.isLeaf:
-            if len(A.particleIds) < 4*self.expansionOrder**2 or (mutual and len(B.particleIds) < self.expansionOrder**2): # test if direct summation is faster
-                self.acc[idsB] += kernels.p2p.acceleration(self.pos[idsA],self.pos[idsB], self.masses[idsA], G=self.G, use_jax=False)
-                return
-        # if no node is leaf
-        if len(ids) < self.expansionOrder**3:
-            self.acc[idsB] += kernels.p2p.acceleration(self.pos[idsA], self.pos[idsB], self.masses[idsA], G=self.G, use_jax=False)
-            return
-
-        # compute A->B approx.
-        if A.isLeaf:    # apply P2L
-            for p in A.particleIds:
-                B.fieldTensor += kernels.p2l(self.pos[p], self.masses[p], B, self.harmonics)  
-        elif B.isLeaf:  # apple M2P
+        # A -> B , compute m2p
+        if B.isLeaf: 
             for p in B.particleIds:
                 pot = kernels.m2p(A, self.pos[p], self.harmonics)
                 # add test if imaginary part is small enough as pot[1,0] analytically should be real
                 if np.abs(pot[1,0].imag) > 1e-15:
                     warnings.warn('Imaginart part > 1e-15 detected in potential. Psi[1,0] should be real.', UserWarning)
                 self.acc[p] += -1*np.array([pot[1,1].real, pot[1,1].imag, pot[1,0].real])
+
+        # B -> A, compute m2p
+        if A.isLeaf:
+            for p in A.particleIds:
+                pot = kernels.m2p(B, self.pos[p], self.harmonics)
+                # add test if imaginary part is small enough as pot[1,0] analytically should be real
+                if np.abs(pot[1,0].imag) > 1e-15:
+                    warnings.warn('Imaginart part > 1e-15 detected in potential. Psi[1,0] should be real.', UserWarning)
+                self.acc[p] += -1*np.array([pot[1,1].real, pot[1,1].imag, pot[1,0].real])
+
+
+
+    def approximate(self, A:Node, B:Node, mutual:bool):
+        '''Compute interaction between cells and pass it down the tree.'''
+        idsA = A.particleIds
+        idsB = B.particleIds
+
+        # compute A->B approx.
+        if B.isLeaf:  # apply M2P
+            if  len(A.particleIds) < 4*(self.expansionOrder**2): # direct summation if faster
+                self.acc[idsB] += kernels.p2p.acceleration(self.pos[idsA], self.pos[idsB], self.masses[idsA], G=self.G, use_jax=False)
+            else:
+                for p in B.particleIds:
+                    pot = kernels.m2p(A, self.pos[p], self.harmonics)
+                    # add test if imaginary part is small enough as pot[1,0] analytically should be real
+                    if np.abs(pot[1,0].imag) > 1e-15:
+                        warnings.warn('Imaginart part > 1e-15 detected in potential. Psi[1,0] should be real.', UserWarning)
+                    self.acc[p] += -1*np.array([pot[1,1].real, pot[1,1].imag, pot[1,0].real])
+        elif A.isLeaf:    # apply P2L
+            if len(B.particleIds) < self.expansionOrder**2: #do direct summation if faster
+                self.acc[idsB] += kernels.p2p.acceleration(self.pos[idsA], self.pos[idsB], self.masses[idsA], G=self.G, use_jax=False)
+            else:
+                for p in A.particleIds:
+                    B.fieldTensor += kernels.p2l(self.pos[p], self.masses[p], B, self.harmonics)  
         else:           # apply M2L
             B.fieldTensor += kernels.m2l(A,B,self.harmonics)
 
         # compute B->A approx. if mutual
         if mutual:
-            if B.isLeaf:
-                for p in B.particleIds:
-                    A.fieldTensor += kernels.p2l(self.pos[p], self.masses[p], A, self.harmonics)
-            elif A.isLeaf:
-                for p in A.particleIds:
-                    pot = kernels.m2p(B, self.pos[p], self.harmonics)
-                    # add test if imaginary part is small enough as pot[1,0] analytically should be real
-                    if np.abs(pot[1,0].imag) > 1e-15:
-                        warnings.warn('Imaginart part > 1e-15 detected in potential. Psi[1,0] should be real.', UserWarning)
-                    self.acc[p] += -1 * np.array([pot[1,1].real, pot[1,1].imag, pot[1,0].real])
-            else:
-                A.fieldTensor += kernels.m2l(B,A,self.harmonics)
+            self.approximate(B,A,mutual=False)
         
 
     def dualTreeWalk(self, A:Node, B:Node, mutual: bool):
@@ -377,6 +390,7 @@ class fmmSimulator(Simulator):
         # approximate cell <-> cell if MAC is met (compute field tensors and pass down the tree)
         if self.MAC.eval(A,B):
             self.approximate(A,B, mutual)
+            # self.approximateSimple(A,B)
         
         # Do direct summation if we end up in 2 leafs
         elif (A.isLeaf and B.isLeaf):

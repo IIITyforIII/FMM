@@ -111,6 +111,14 @@ class Point3D:
 def mapCartToPolar(cartesian: np.ndarray):
     '''Maps a singe point in cartesian coordinates to polar coordinates.'''
     r = np.sqrt(cartesian[0]**2 + cartesian[1]**2 + cartesian[2]**2)
-    theta = jnp.arccos(cartesian[2]/ r) if r!=0 else 0.
+    theta = np.arccos(cartesian[2]/ r) if r!=0 else 0.
     phi = np.arctan2(cartesian[1] , cartesian[0]) 
     return np.array([r, theta, phi])
+
+
+def mapPolarToCart(polar: np.ndarray):
+    """Convert point to cartesian coordinates."""
+    x = polar[0] * np.sin(polar[1]) * np.cos(polar[2])
+    y = polar[0] * np.sin(polar[1]) * np.sin(polar[2])
+    z = polar[0] * np.cos(polar[1])
+    return np.array([x, y, z])
